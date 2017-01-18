@@ -241,11 +241,12 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	
 	
 	// alloc memory for totals table
-	// totals = ( unsigned short* ) calloc( max_symbol + 2, sizeof( short ) );
-	totals = ( unsigned int* ) calloc( max_symbol + 2, sizeof( int ) );
+	totals = new unsigned int[max_symbol + 2];
+	std::fill(totals, totals + max_symbol + 2, unsigned int(0));
 	
 	// alloc memory for scoreboard, set sb0_count
-	scoreboard = ( char* ) calloc( max_symbol, sizeof( char ) );
+	scoreboard = new char[max_symbol];
+	std::fill(scoreboard, scoreboard + max_symbol, 0);
 	sb0_count = max_symbol;
 	
 	// set current order
@@ -253,35 +254,31 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	
 	
 	// set up null table
-	null_table = ( table_s* ) calloc( 1, sizeof( table_s ) );
-	if ( null_table == nullptr ) ERROR_EXIT;	
-	null_table->counts = ( unsigned short* ) calloc( max_symbol, sizeof( short ) );
-	if ( null_table->counts == nullptr ) ERROR_EXIT;
-	for ( i = 0; i < max_symbol; i++ )
-		null_table->counts[ i ] = 1; // set all probabilities
+	null_table = new table_s;
+	null_table->counts = new unsigned short[max_symbol];
+	std::fill(null_table->counts, null_table->counts + max_symbol, unsigned short(1)); // Set all probabilities.
+
 	// set up internal counts
 	null_table->max_count = 1;
 	null_table->max_symbol = max_symbol;
 	
 	// set up start table
-	start_table = ( table_s* ) calloc( 1, sizeof( table_s ) );
-    if ( start_table == nullptr ) ERROR_EXIT;	
-	start_table->links = ( table_s** ) calloc( max_context, sizeof( table_s* ) );
-	if ( start_table->links == nullptr ) ERROR_EXIT;
+	start_table = new table_s;
+	start_table->counts = nullptr;
+	start_table->links = new table_s*[max_context];
+	std::fill(start_table->links, start_table->links + max_context, nullptr);
 	// set up internal counts
 	start_table->max_count = 0;
 	start_table->max_symbol = 0;
 	
 	// build links for start table & null table
 	start_table->lesser = null_table;
-	null_table->links = ( table_s** ) calloc( max_context, sizeof( table_s* ) );
-	if ( null_table->links == nullptr ) ERROR_EXIT;
-	for ( i = 0; i < max_context; i++ )
-		null_table->links[ i ] = start_table;
+	null_table->links = new table_s*[max_context];
+	std::fill(null_table->links, null_table->links + max_context, start_table);
 	
 	// alloc memory for storage & contexts
-	storage = ( table_s** ) calloc( max_order + 3, sizeof( table_s* ) );
-	if ( storage == nullptr ) ERROR_EXIT;
+	storage = new table_s*[max_order + 3];
+	std::fill(storage, storage + max_order + 3, nullptr);
 	contexts = storage + 1;
 	
 	// integrate tables into contexts
@@ -291,15 +288,15 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	// build initial 'normal' tables
 	for ( i = 1; i <= max_order; i++ ) {
 		// set up current order table
-		contexts[ i ] = ( table_s* ) calloc( 1, sizeof( table_s ) );
-	    if ( contexts[ i ] == nullptr ) ERROR_EXIT;
+		contexts[i] = new table_s;
+		contexts[i]->counts = nullptr;
 		contexts[ i ]->max_count  = 0;
 		contexts[ i ]->max_symbol = 0;
 		// build forward and backward links
 		contexts[ i ]->lesser = contexts[ i - 1 ];
 		if ( i < max_order ) {
-			contexts[ i ]->links = ( table_s** ) calloc( max_context, sizeof( table_s* ) );
-			if ( contexts[ i ]->links == nullptr ) ERROR_EXIT;
+			contexts[i]->links = new table_s*[max_context];
+			std::fill(contexts[i]->links, contexts[i]->links + max_context, nullptr);
 		}
 		else {
 			contexts[ i ]->links = nullptr;
@@ -324,15 +321,18 @@ model_s::~model_s( void )
 	
 	// clean up null table
 	context = contexts[ -1 ];	
-	if ( context->links  != nullptr )
-		free( context->links  );
-	if ( context->counts != nullptr ) free( context->counts );
-	free ( context );
+	if (context->links != nullptr) {
+		delete[] context->links;
+	}
+	if (context->counts != nullptr) {
+		delete[] context->counts;
+	}
+	delete context;
 	
 	// free everything else
-	free( storage );
-	free( totals );
-	free( scoreboard );
+	delete[] storage;
+	delete[] totals;
+	delete[] scoreboard;
 }
 
 
@@ -346,9 +346,7 @@ void model_s::update_model( int symbol )
 	
 	table_s* context;
 	unsigned short* counts;
-	int local_order;
-	int i;
-	
+	int local_order;	
 	
 	// only contexts, that were actually used to encode
 	// the symbol get their counts updated
@@ -397,8 +395,7 @@ void model_s::shift_context( int c )
 		// check if context exists, build if needed
 		if ( context == nullptr ) {
 			// reserve memory for next table_s
-			context = ( table_s* ) calloc( 1, sizeof( table_s ) );
-			if ( context == nullptr ) ERROR_EXIT;			
+			context = new table_s;		
 			// set counts nullptr
 			context->counts = nullptr;
 			// setup internal counts
@@ -411,8 +408,8 @@ void model_s::shift_context( int c )
 				context->links = nullptr;
 			else {
 				// build links to higher order tables otherwise
-				context->links = ( table_s** ) calloc( max_context, sizeof( table_s* ) );
-				if ( context->links == nullptr ) ERROR_EXIT;
+				context->links = new table_s*[max_context];
+				std::fill(context->links, context->links + max_context, nullptr);
 				// add lesser link for higher context (see above)
 				contexts[ i + 1 ]->lesser = context;
 			}
@@ -626,8 +623,8 @@ void model_s::totalize_table( table_s *context )
 	}
 	else { // if counts are not already set
 		// setup counts for current table
-		context->counts = ( unsigned short* ) calloc( max_symbol, sizeof( short ) );
-		if ( context->counts == nullptr ) ERROR_EXIT;
+		context->counts = new unsigned short[max_symbol];
+		std::fill(context->counts, context->counts + max_symbol, unsigned short(0));
 		// set totals table -> only escape probability included
 		totals[ 0 ] = 1;
 		totals[ 1 ] = 0;
@@ -698,12 +695,14 @@ inline void model_s::recursive_cleanup( table_s *context )
 		for ( i = 0; i < max_context; i++ )
 			if ( context->links[ i ] != nullptr )
 				recursive_cleanup( context->links[ i ] );
-		free ( context->links );
+		delete[] context->links;
 	}
-	
+
 	// clean up table	
-	if ( context->counts != nullptr ) free ( context->counts );	
-	free( context );
+	if (context->counts != nullptr) {
+		delete[] context->counts;
+	}
+	delete context;
 }
 
 
