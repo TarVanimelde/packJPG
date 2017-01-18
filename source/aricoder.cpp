@@ -254,9 +254,9 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	
 	// set up null table
 	null_table = ( table_s* ) calloc( 1, sizeof( table_s ) );
-	if ( null_table == NULL ) ERROR_EXIT;	
+	if ( null_table == nullptr ) ERROR_EXIT;	
 	null_table->counts = ( unsigned short* ) calloc( max_symbol, sizeof( short ) );
-	if ( null_table->counts == NULL ) ERROR_EXIT;
+	if ( null_table->counts == nullptr ) ERROR_EXIT;
 	for ( i = 0; i < max_symbol; i++ )
 		null_table->counts[ i ] = 1; // set all probabilities
 	// set up internal counts
@@ -265,9 +265,9 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	
 	// set up start table
 	start_table = ( table_s* ) calloc( 1, sizeof( table_s ) );
-    if ( start_table == NULL ) ERROR_EXIT;	
+    if ( start_table == nullptr ) ERROR_EXIT;	
 	start_table->links = ( table_s** ) calloc( max_context, sizeof( table_s* ) );
-	if ( start_table->links == NULL ) ERROR_EXIT;
+	if ( start_table->links == nullptr ) ERROR_EXIT;
 	// set up internal counts
 	start_table->max_count = 0;
 	start_table->max_symbol = 0;
@@ -275,13 +275,13 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	// build links for start table & null table
 	start_table->lesser = null_table;
 	null_table->links = ( table_s** ) calloc( max_context, sizeof( table_s* ) );
-	if ( null_table->links == NULL ) ERROR_EXIT;
+	if ( null_table->links == nullptr ) ERROR_EXIT;
 	for ( i = 0; i < max_context; i++ )
 		null_table->links[ i ] = start_table;
 	
 	// alloc memory for storage & contexts
 	storage = ( table_s** ) calloc( max_order + 3, sizeof( table_s* ) );
-	if ( storage == NULL ) ERROR_EXIT;
+	if ( storage == nullptr ) ERROR_EXIT;
 	contexts = storage + 1;
 	
 	// integrate tables into contexts
@@ -292,17 +292,17 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	for ( i = 1; i <= max_order; i++ ) {
 		// set up current order table
 		contexts[ i ] = ( table_s* ) calloc( 1, sizeof( table_s ) );
-	    if ( contexts[ i ] == NULL ) ERROR_EXIT;
+	    if ( contexts[ i ] == nullptr ) ERROR_EXIT;
 		contexts[ i ]->max_count  = 0;
 		contexts[ i ]->max_symbol = 0;
 		// build forward and backward links
 		contexts[ i ]->lesser = contexts[ i - 1 ];
 		if ( i < max_order ) {
 			contexts[ i ]->links = ( table_s** ) calloc( max_context, sizeof( table_s* ) );
-			if ( contexts[ i ]->links == NULL ) ERROR_EXIT;
+			if ( contexts[ i ]->links == nullptr ) ERROR_EXIT;
 		}
 		else {
-			contexts[ i ]->links = NULL;
+			contexts[ i ]->links = nullptr;
 		}
 		contexts[ i - 1 ]->links[ 0 ] = contexts[ i ];
 	}
@@ -324,9 +324,9 @@ model_s::~model_s( void )
 	
 	// clean up null table
 	context = contexts[ -1 ];	
-	if ( context->links  != NULL )
+	if ( context->links  != nullptr )
 		free( context->links  );
-	if ( context->counts != NULL ) free( context->counts );
+	if ( context->counts != nullptr ) free( context->counts );
 	free ( context );
 	
 	// free everything else
@@ -371,8 +371,7 @@ void model_s::update_model( int symbol )
 	
 	// reset scoreboard and current order
 	current_order = max_order;
-	for ( i = 0; i < max_symbol; i++ )
-		scoreboard[ i ] = 0;
+	std::fill(scoreboard, scoreboard + max_symbol, char(0));
 	sb0_count = max_symbol;
 }
 
@@ -396,12 +395,12 @@ void model_s::shift_context( int c )
 		context = contexts[ i - 1 ]->links[ c ];
 		
 		// check if context exists, build if needed
-		if ( context == NULL ) {
+		if ( context == nullptr ) {
 			// reserve memory for next table_s
 			context = ( table_s* ) calloc( 1, sizeof( table_s ) );
-			if ( context == NULL ) ERROR_EXIT;			
-			// set counts NULL
-			context->counts = NULL;
+			if ( context == nullptr ) ERROR_EXIT;			
+			// set counts nullptr
+			context->counts = nullptr;
 			// setup internal counts
 			context->max_count  = 0;
 			context->max_symbol = 0;
@@ -409,11 +408,11 @@ void model_s::shift_context( int c )
 			context->lesser = contexts[ i - 2 ]->links[ c ];
 			// finished here if this is a max order context
 			if ( i == max_order )
-				context->links = NULL;
+				context->links = nullptr;
 			else {
 				// build links to higher order tables otherwise
 				context->links = ( table_s** ) calloc( max_context, sizeof( table_s* ) );
-				if ( context->links == NULL ) ERROR_EXIT;
+				if ( context->links == nullptr ) ERROR_EXIT;
 				// add lesser link for higher context (see above)
 				contexts[ i + 1 ]->lesser = context;
 			}
@@ -585,7 +584,7 @@ void model_s::totalize_table( table_s *context )
 	counts = context->counts;
 	
 	// check counts
-	if ( counts != NULL ) {	// if counts are already set
+	if ( counts != nullptr ) {	// if counts are already set
 		// locally store current fill/symbol count
 		local_symb = sb0_count;
 		
@@ -628,7 +627,7 @@ void model_s::totalize_table( table_s *context )
 	else { // if counts are not already set
 		// setup counts for current table
 		context->counts = ( unsigned short* ) calloc( max_symbol, sizeof( short ) );
-		if ( context->counts == NULL ) ERROR_EXIT;
+		if ( context->counts == nullptr ) ERROR_EXIT;
 		// set totals table -> only escape probability included
 		totals[ 0 ] = 1;
 		totals[ 1 ] = 0;
@@ -647,7 +646,7 @@ inline void model_s::rescale_table( table_s* context, int scale_factor )
 	int i;
 	
 	// return now if counts not set
-	if ( counts == NULL ) return;
+	if ( counts == nullptr ) return;
 	
 	// now scale the table by bitshifting each count
 	for ( i = 0; i < lst_symbol; i++ ) {
@@ -673,10 +672,10 @@ inline void model_s::recursive_flush( table_s* context, int scale_factor )
 {
 	int i;
 
-	// go through each link != NULL
-	if ( context->links != NULL )
+	// go through each link != nullptr
+	if ( context->links != nullptr )
 		for ( i = 0; i < max_context; i++ )
-			if ( context->links[ i ] != NULL )
+			if ( context->links[ i ] != nullptr )
 				recursive_flush( context->links[ i ], scale_factor );
     
 	// rescale specific table
@@ -694,16 +693,16 @@ inline void model_s::recursive_cleanup( table_s *context )
 	
 	int i;
 
-	// go through each link != NULL
-	if ( context->links != NULL ) {
+	// go through each link != nullptr
+	if ( context->links != nullptr ) {
 		for ( i = 0; i < max_context; i++ )
-			if ( context->links[ i ] != NULL )
+			if ( context->links[ i ] != nullptr )
 				recursive_cleanup( context->links[ i ] );
 		free ( context->links );
 	}
 	
 	// clean up table	
-	if ( context->counts != NULL ) free ( context->counts );	
+	if ( context->counts != nullptr ) free ( context->counts );	
 	free( context );
 }
 
@@ -735,31 +734,31 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	
 	// set up null table
 	null_table = ( table* ) calloc( 1, sizeof( table ) );
-	if ( null_table == NULL ) ERROR_EXIT;
+	if ( null_table == nullptr ) ERROR_EXIT;
 	
 	null_table->counts = ( unsigned short* ) calloc( 2, sizeof( short ) );
-	if ( null_table->counts == NULL ) ERROR_EXIT;
+	if ( null_table->counts == nullptr ) ERROR_EXIT;
 	null_table->counts[ 0 ] = 1;
 	null_table->counts[ 1 ] = 1;
 	null_table->scale = 2;
 	
 	// set up start table
 	start_table = ( table* ) calloc( 1, sizeof( table ) );
-    if ( start_table == NULL ) ERROR_EXIT;	
+    if ( start_table == nullptr ) ERROR_EXIT;	
 	start_table->links = ( table** ) calloc( max_context, sizeof( table* ) );
-	if ( start_table->links == NULL ) ERROR_EXIT;
+	if ( start_table->links == nullptr ) ERROR_EXIT;
 	start_table->scale = 0;
 	
 	// build links for start table & null table
 	start_table->lesser = null_table;
 	null_table->links = ( table** ) calloc( max_context, sizeof( table* ) );
-	if ( null_table->links == NULL ) ERROR_EXIT;
+	if ( null_table->links == nullptr ) ERROR_EXIT;
 	for ( i = 0; i < max_context; i++ )
 		null_table->links[ i ] = start_table;
 	
 	// alloc memory for storage & contexts
 	storage = ( table** ) calloc( max_order + 3, sizeof( table* ) );
-	if ( storage == NULL ) ERROR_EXIT;
+	if ( storage == nullptr ) ERROR_EXIT;
 	contexts = storage + 1;
 	
 	// integrate tables into contexts
@@ -770,16 +769,16 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	for ( i = 1; i <= max_order; i++ ) {
 		// set up current order table
 		contexts[ i ] = ( table* ) calloc( 1, sizeof( table ) );
-	    if ( contexts[ i ] == NULL ) ERROR_EXIT;
+	    if ( contexts[ i ] == nullptr ) ERROR_EXIT;
 		contexts[ i ]->scale = 0;
 		// build forward and backward links
 		contexts[ i ]->lesser = contexts[ i - 1 ];
 		if ( i < max_order ) {
 			contexts[ i ]->links = ( table** ) calloc( max_context, sizeof( table* ) );
-			if ( contexts[ i ]->links == NULL ) ERROR_EXIT;
+			if ( contexts[ i ]->links == nullptr ) ERROR_EXIT;
 		}
 		else {
-			contexts[ i ]->links = NULL;
+			contexts[ i ]->links = nullptr;
 		}
 		contexts[ i - 1 ]->links[ 0 ] = contexts[ i ];
 	}
@@ -801,9 +800,9 @@ model_b::~model_b( void )
 	
 	// clean up null table
 	context = contexts[ -1 ];	
-	if ( context->links  != NULL )
+	if ( context->links  != nullptr )
 		free( context->links  );
-	if ( context->counts != NULL ) free( context->counts );
+	if ( context->counts != nullptr ) free( context->counts );
 	free ( context );
 	
 	// free everything else
@@ -854,23 +853,23 @@ void model_b::shift_context( int c )
 		context = contexts[ i - 1 ]->links[ c ];
 		
 		// check if context exists, build if needed
-		if ( context == NULL ) {
+		if ( context == nullptr ) {
 			// reserve memory for next table
 			context = ( table* ) calloc( 1, sizeof( table ) );
-			if ( context == NULL ) ERROR_EXIT;			
-			// set internal counts NULL
-			context->counts = NULL;
+			if ( context == nullptr ) ERROR_EXIT;			
+			// set internal counts nullptr
+			context->counts = nullptr;
 			context->scale  = 0;	
 			// link lesser context later if not existing, this is done below
 			context->lesser = contexts[ i - 2 ]->links[ c ];
 			// finished here if this is a max order context
 			if ( i == max_order ) {
-				context->links = NULL;
+				context->links = nullptr;
 			}
 			else {
 				// build links to higher order tables otherwise
 				context->links = ( table** ) calloc( max_context, sizeof( table* ) );
-				if ( context->links == NULL ) ERROR_EXIT;
+				if ( context->links == nullptr ) ERROR_EXIT;
 				// add lesser link for higher context (see above)
 				contexts[ i + 1 ]->lesser = context;
 			}
@@ -970,10 +969,10 @@ inline void model_b::check_counts( table *context )
 	unsigned short* counts = context->counts;
 	
 	// check if counts are available
-	if ( counts == NULL ) {
+	if ( counts == nullptr ) {
 		// setup counts for current table
 		counts = ( unsigned short* ) calloc( 2, sizeof( short ) );
-		if ( counts == NULL ) ERROR_EXIT;
+		if ( counts == nullptr ) ERROR_EXIT;
 		counts[ 0 ] = 1;
 		counts[ 1 ] = 1;
 		// set scale
@@ -992,7 +991,7 @@ inline void model_b::rescale_table( table* context, int scale_factor )
 	unsigned short* counts = context->counts;
 	
 	// return now if counts not set
-	if ( counts == NULL ) return;
+	if ( counts == nullptr ) return;
 	
 	// now scale the table by bitshifting each count, be careful not to set any count zero
 	counts[ 0 ] >>= scale_factor;
@@ -1011,10 +1010,10 @@ inline void model_b::recursive_flush( table* context, int scale_factor )
 {
 	int i;
 
-	// go through each link != NULL
-	if ( context->links != NULL )
+	// go through each link != nullptr
+	if ( context->links != nullptr )
 		for ( i = 0; i < max_context; i++ )
-			if ( context->links[ i ] != NULL )
+			if ( context->links[ i ] != nullptr )
 				recursive_flush( context->links[ i ], scale_factor );
     
 	// rescale specific table
@@ -1030,15 +1029,15 @@ inline void model_b::recursive_cleanup( table *context )
 {
 	int i;
 
-	// go through each link != NULL
-	if ( context->links != NULL ) {
+	// go through each link != nullptr
+	if ( context->links != nullptr ) {
 		for ( i = 0; i < max_context; i++ )
-			if ( context->links[ i ] != NULL )
+			if ( context->links[ i ] != nullptr )
 				recursive_cleanup( context->links[ i ] );
 		free ( context->links );
 	}
 	
 	// clean up table	
-	if ( context->counts != NULL ) free ( context->counts );	
+	if ( context->counts != nullptr ) free ( context->counts );	
 	free( context );
 }
