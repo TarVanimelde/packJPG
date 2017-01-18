@@ -73,6 +73,8 @@ class aricoder
 		}
 	}
 	
+	void writeNrbitsAsZero();
+	void writeNrbitsAsOne();
 	unsigned char read_bit();
 	
 	// i/o variables

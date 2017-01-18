@@ -53,8 +53,7 @@ aricoder::~aricoder()
 			write_bit<0>();
 			// write remaining bits
 			write_bit<1>();
-			while ( nrbits-- > 0 )
-				write_bit<1>();
+			writeNrbitsAsOne();
 		}
 		else { // case b.), clow >= CODER_LIMIT025
 			write_bit<1>();
@@ -73,8 +72,14 @@ aricoder::~aricoder()
 	
 void aricoder::encode( symbol* s )
 {	
+	// Make local copies of clow_ and chigh_ for cache performance:
+	uint32_t clowLocal = clow;
+	uint32_t chighLocal = chigh;
 	// update steps, low count, high count
-	cstep = ( ( chigh - clow ) + 1 ) / s->scale;
+	cstep = (chighLocal - clowLocal + 1) / s->scale;
+	chighLocal = clowLocal + (cstep * s->high_count) - 1;
+	clowLocal = clowLocal + (cstep * s->low_count);
+	//cstep = ( ( chigh - clow ) + 1 ) / s->scale;
 	chigh = clow + ( cstep * s->high_count ) - 1;
 	clow  = clow + ( cstep * s->low_count );
 	
@@ -86,17 +91,15 @@ void aricoder::encode( symbol* s )
 			// write 0 bit
 			write_bit<0>();
 			// shift out remaing e3 bits
-			for ( ; nrbits > 0; nrbits-- )
-				write_bit<1>();
+			writeNrbitsAsOne();
 		}
 		else { // if the first wasn't the case, it's clow >= CODER_LIMIT050
 			// write 1 bit
-			write_bit( 1 );
+			write_bit<1>();
 			clow  &= CODER_LIMIT050 - 1;
 			chigh &= CODER_LIMIT050 - 1;
 			// shift out remaing e3 bits
-			for ( ; nrbits > 0; nrbits-- )
-				write_bit<0>();
+			writeNrbitsAsZero();
 		}
 		clow  <<= 1;
 		chigh <<= 1;
@@ -115,6 +118,55 @@ void aricoder::encode( symbol* s )
 		chigh++;
 	}
 }
+
+void aricoder::writeNrbitsAsZero() {
+	if (nrbits + cbit >= 8) {
+		int remainingBits = 8 - cbit;
+		nrbits -= remainingBits;
+		bbyte <<= remainingBits;
+		sptr->write(&bbyte, 1, 1);
+		cbit = 0;
+	}
+
+	constexpr uint8_t zero = 0;
+	while (nrbits >= 8) {
+		sptr->write((void*)&zero, 1, 1);
+		nrbits -= 8;
+	}
+	/*
+	No need to check if cbits is 8, since nrbits is strictly less than 8
+	and cbit is initially 0 here:
+	*/
+	bbyte <<= nrbits;
+	cbit += nrbits;
+	nrbits = 0;
+}
+
+void aricoder::writeNrbitsAsOne() {
+	if (nrbits + cbit >= 8) {
+		int remainingBits = 8 - cbit;
+		nrbits -= remainingBits;
+		bbyte <<= remainingBits;
+		bbyte |= std::numeric_limits<uint8_t>::max() >> (8 - remainingBits);
+		sptr->write(&bbyte, 1, 1);
+		cbit = 0;
+	}
+
+	constexpr uint8_t all_ones = std::numeric_limits<uint8_t>::max();
+	while (nrbits >= 8) {
+		sptr->write((void*)&all_ones, 1, 1);
+		nrbits -= 8;
+	}
+
+	/*
+	No need to check if cbits is 8, since nrbits is strictly less than 8
+	and cbit is initially 0 here:
+	*/
+	bbyte = (bbyte << nrbits) | (std::numeric_limits<uint8_t>::max() >> (8 - nrbits));
+	cbit += nrbits;
+	nrbits = 0;
+}
+
 
 /* -----------------------------------------------
 	arithmetic decoder get count function
