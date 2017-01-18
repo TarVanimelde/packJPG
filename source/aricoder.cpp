@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "bitops.h"
 #include "aricoder.h"
+#include <algorithm>
 
 #define ERROR_EXIT { error = true; exit( 0 ); }
 
@@ -43,24 +44,26 @@ aricoder::aricoder( iostream* stream, int iomode )
 	destructor for aricoder class
 	----------------------------------------------- */
 
-aricoder::~aricoder( void )
+aricoder::~aricoder()
 {
 	if ( mode == 1 ) { // mode is writing / encoding
 		// due to clow < CODER_LIMIT050, and chigh >= CODER_LIMIT050
 		// there are only two possible cases
 		if ( clow < CODER_LIMIT025 ) { // case a.) 
-			write_bit( 0 );
+			write_bit<0>();
 			// write remaining bits
-			write_bit( 1 );
+			write_bit<1>();
 			while ( nrbits-- > 0 )
-				write_bit( 1 );
+				write_bit<1>();
 		}
 		else { // case b.), clow >= CODER_LIMIT025
-			write_bit( 1 );
+			write_bit<1>();
 		} // done, zeroes are auto-read by the decoder
 		
 		// pad code with zeroes
-		while ( cbit > 0 ) write_bit( 0 );
+		while (cbit > 0) {
+			write_bit<0>();
+		}
 	}
 }
 
@@ -81,10 +84,10 @@ void aricoder::encode( symbol* s )
 	while ( ( clow >= CODER_LIMIT050 ) || ( chigh < CODER_LIMIT050 ) ) {		
 		if ( chigh < CODER_LIMIT050 ) {	// this means both, high and low are below, and 0 can be safely shifted out
 			// write 0 bit
-			write_bit( 0 );
+			write_bit<0>();
 			// shift out remaing e3 bits
 			for ( ; nrbits > 0; nrbits-- )
-				write_bit( 1 );
+				write_bit<1>();
 		}
 		else { // if the first wasn't the case, it's clow >= CODER_LIMIT050
 			// write 1 bit
@@ -93,7 +96,7 @@ void aricoder::encode( symbol* s )
 			chigh &= CODER_LIMIT050 - 1;
 			// shift out remaing e3 bits
 			for ( ; nrbits > 0; nrbits-- )
-				write_bit( 0 );
+				write_bit<0>();
 		}
 		clow  <<= 1;
 		chigh <<= 1;
@@ -174,28 +177,10 @@ void aricoder::decode( symbol* s )
 }
 
 /* -----------------------------------------------
-	bit writer function
-	----------------------------------------------- */
-	
-void aricoder::write_bit( unsigned char bit )
-{
-	// add bit at last position
-	bbyte = ( bbyte << 1 ) | bit;
-	// increment bit position
-	cbit++;
-	
-	// write bit if done
-	if ( cbit == 8 ) {
-		sptr->write( (void*) &bbyte, 1, 1 );
-		cbit = 0;
-	}
-}
-
-/* -----------------------------------------------
 	bit reader function
 	----------------------------------------------- */
 	
-unsigned char aricoder::read_bit( void )
+unsigned char aricoder::read_bit()
 {
 	// read in new byte if needed
 	if ( cbit == 0 ) {
@@ -245,8 +230,8 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	std::fill(totals, totals + max_symbol + 2, unsigned int(0));
 	
 	// alloc memory for scoreboard, set sb0_count
-	scoreboard = new char[max_symbol];
-	std::fill(scoreboard, scoreboard + max_symbol, 0);
+	scoreboard = new bool[max_symbol];
+	std::fill(scoreboard, scoreboard + max_symbol, false);
 	sb0_count = max_symbol;
 	
 	// set current order
@@ -310,7 +295,7 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	model class destructor - recursive cleanup of memory is done here
 	----------------------------------------------- */
 
-model_s::~model_s( void )
+model_s::~model_s()
 {
 	table_s* context;
 	
@@ -369,7 +354,7 @@ void model_s::update_model( int symbol )
 	
 	// reset scoreboard and current order
 	current_order = max_order;
-	std::fill(scoreboard, scoreboard + max_symbol, char(0));
+	std::fill(scoreboard, scoreboard + max_symbol, false);
 	sb0_count = max_symbol;
 }
 
@@ -447,8 +432,8 @@ void model_s::exclude_symbols( char rule, int c )
 			// above rule
 			// every symbol above c is excluded
 			for ( c = c + 1; c < max_symbol; c++ ) {
-				if ( scoreboard[ c ] == 0 ) {
-					scoreboard[ c ] = 1;
+				if ( !scoreboard[ c ] ) {
+					scoreboard[ c ] = true;
 					sb0_count--;
 				}
 			}
@@ -458,8 +443,8 @@ void model_s::exclude_symbols( char rule, int c )
 			// below rule
 			// every symbol below c is excluded
 			for ( c = c - 1; c >= 0; c-- ) {
-				if ( scoreboard[ c ] == 0 ) {
-					scoreboard[ c ] = 1;
+				if ( !scoreboard[ c ] ) {
+					scoreboard[ c ] = true;
 					sb0_count--;
 				}
 			}
@@ -468,8 +453,8 @@ void model_s::exclude_symbols( char rule, int c )
 		case 'e':
 			// equal rule
 			// only c is excluded
-			if ( scoreboard[ c ] == 0 ) {
-				scoreboard[ c ] = 1;
+			if ( !scoreboard[ c ] ) {
+				scoreboard[ c ] = true;
 				sb0_count--;
 			}
 			break;
@@ -595,13 +580,13 @@ void model_s::totalize_table( table_s *context )
 		// leave space at the beginning of the table for the escape symbol
 		for ( ; i >= 0; i-- ) {			
 			// only count probability if the current symbol is not 'scoreboard - excluded'
-			if ( scoreboard[ i ] == 0 ) {
+			if ( !scoreboard[ i ] ) {
 				curr_count = counts[ i ];
 				if ( curr_count > 0 ) {
 					// add counts for the current symbol
 					curr_total = curr_total + curr_count;
 					// exclude symbol from scoreboard
-					scoreboard[ i ] = 1;
+					scoreboard[ i ] = true;
 					sb0_count--;
 				}
 			}
@@ -647,7 +632,7 @@ inline void model_s::rescale_table( table_s* context, int scale_factor )
 	
 	// now scale the table by bitshifting each count
 	for ( i = 0; i < lst_symbol; i++ ) {
-		if ( counts[ i ] > 0 )
+		//if ( counts[ i ] > 0 ) // Unnecessary check since counts is an unsigned type.
 			counts[ i ] >>= scale_factor;
 	}
 		
@@ -782,7 +767,7 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	model class destructor - recursive cleanup of memory is done here
 	----------------------------------------------- */
 	
-model_b::~model_b( void )
+model_b::~model_b()
 {
 	table* context;
 	

@@ -52,15 +52,28 @@ class aricoder
 {
 	public:
 	aricoder( iostream* stream, int iomode );
-	~aricoder( void );
+	~aricoder();
 	void encode( symbol* s );
 	unsigned int decode_count( symbol* s );
 	void decode( symbol* s );
 	
 	private:
-	// bitwise operations
-	void write_bit( unsigned char bit );
-	unsigned char read_bit( void );
+
+	template<uint8_t bit>
+	void write_bit() {
+		// add bit at last position
+		bbyte = (bbyte << 1) | bit;
+		// increment bit position
+		cbit++;
+
+		// write bit if done
+		if (cbit == 8) {
+			sptr->write(&bbyte, 1, 1);
+			cbit = 0;
+		}
+	}
+	
+	unsigned char read_bit();
 	
 	// i/o variables
 	iostream* sptr;
@@ -86,7 +99,7 @@ class model_s
 	public:
 	
 	model_s( int max_s, int max_c, int max_o, int c_lim );
-	~model_s( void );
+	~model_s();
 	
 	void update_model( int symbol );
 	void shift_context( int c );
@@ -104,7 +117,7 @@ class model_s
 	
 	// unsigned short* totals;
 	unsigned int* totals;
-	char* scoreboard;
+	bool* scoreboard;
 	int sb0_count;
 	table_s **contexts;
 	table_s **storage;
@@ -131,7 +144,7 @@ class model_b
 	public:
 	
 	model_b( int max_c, int max_o, int c_lim );
-	~model_b( void );
+	~model_b();
 	
 	void update_model( int symbol );
 	void shift_context( int c );
