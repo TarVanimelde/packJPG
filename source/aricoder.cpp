@@ -73,21 +73,18 @@ aricoder::~aricoder()
 void aricoder::encode( symbol* s )
 {	
 	// Make local copies of clow_ and chigh_ for cache performance:
-	uint32_t clowLocal = clow;
-	uint32_t chighLocal = chigh;
+	uint32_t clow_local = clow;
+	uint32_t chigh_local = chigh;
 	// update steps, low count, high count
-	cstep = (chighLocal - clowLocal + 1) / s->scale;
-	chighLocal = clowLocal + (cstep * s->high_count) - 1;
-	clowLocal = clowLocal + (cstep * s->low_count);
-	//cstep = ( ( chigh - clow ) + 1 ) / s->scale;
-	chigh = clow + ( cstep * s->high_count ) - 1;
-	clow  = clow + ( cstep * s->low_count );
+	cstep = (chigh_local - clow_local + 1) / s->scale;
+	chigh_local = clow_local + (cstep * s->high_count) - 1;
+	clow_local = clow_local + (cstep * s->low_count);
 	
 	// e3 scaling is performed for speed and to avoid underflows
 	// if both, low and high are either in the lower half or in the higher half
 	// one bit can be safely shifted out
-	while ( ( clow >= CODER_LIMIT050 ) || ( chigh < CODER_LIMIT050 ) ) {		
-		if ( chigh < CODER_LIMIT050 ) {	// this means both, high and low are below, and 0 can be safely shifted out
+	while ( clow_local >= CODER_LIMIT050  || chigh_local < CODER_LIMIT050  ) {
+		if (chigh_local < CODER_LIMIT050 ) {	// this means both, high and low are below, and 0 can be safely shifted out
 			// write 0 bit
 			write_bit<0>();
 			// shift out remaing e3 bits
@@ -96,27 +93,30 @@ void aricoder::encode( symbol* s )
 		else { // if the first wasn't the case, it's clow >= CODER_LIMIT050
 			// write 1 bit
 			write_bit<1>();
-			clow  &= CODER_LIMIT050 - 1;
-			chigh &= CODER_LIMIT050 - 1;
+			clow_local &= CODER_LIMIT050 - 1;
+			chigh_local &= CODER_LIMIT050 - 1;
 			// shift out remaing e3 bits
 			writeNrbitsAsZero();
 		}
-		clow  <<= 1;
-		chigh <<= 1;
-		chigh++;
+		clow_local <<= 1;
+		chigh_local <<= 1;
+		chigh_local++;
 	}
 	
 	// e3 scaling, to make sure that theres enough space between low and high
-	while ( ( clow >= CODER_LIMIT025 ) && ( chigh < CODER_LIMIT075 ) ) {
+	while ( (clow_local >= CODER_LIMIT025 ) && (chigh_local < CODER_LIMIT075 ) ) {
 		nrbits++;
-		clow  &= CODER_LIMIT025 - 1;
-		chigh ^= CODER_LIMIT025 + CODER_LIMIT050;
+		clow_local &= CODER_LIMIT025 - 1;
+		chigh_local ^= CODER_LIMIT025 + CODER_LIMIT050;
 		// clow  -= CODER_LIMIT025;
 		// chigh -= CODER_LIMIT025;
-		clow  <<= 1;
-		chigh <<= 1;
-		chigh++;
+		clow_local <<= 1;
+		chigh_local <<= 1;
+		chigh_local++;
 	}
+
+	clow = clow_local;
+	chigh = chigh_local;
 }
 
 void aricoder::writeNrbitsAsZero() {
@@ -192,40 +192,46 @@ void aricoder::decode( symbol* s )
 	
 	// alread have steps updated from decoder_count
 	// update low count and high count
-	chigh = clow + ( cstep * s->high_count ) - 1;
-	clow  = clow + ( cstep * s->low_count );
+	uint32_t ccode_local = ccode;
+	uint32_t clow_local = clow;
+	uint32_t chigh_local = clow_local + (cstep * s->high_count) - 1;
+	clow_local = clow_local + (cstep * s->low_count);
 	
 	// e3 scaling is performed for speed and to avoid underflows
 	// if both, low and high are either in the lower half or in the higher half
 	// one bit can be safely shifted out
-	while ( ( clow >= CODER_LIMIT050 ) || ( chigh < CODER_LIMIT050 ) ) {
-		if ( clow >= CODER_LIMIT050 ) {
-			clow  &= CODER_LIMIT050 - 1;
-			chigh &= CODER_LIMIT050 - 1;
-			ccode &= CODER_LIMIT050 - 1;
+	while ( (clow_local >= CODER_LIMIT050 ) || (chigh_local < CODER_LIMIT050 ) ) {
+		if (clow_local >= CODER_LIMIT050 ) {
+			clow_local &= CODER_LIMIT050 - 1;
+			chigh_local &= CODER_LIMIT050 - 1;
+			ccode_local &= CODER_LIMIT050 - 1;
 		} // if the first wasn't the case, it's chigh < CODER_LIMIT050
-		clow  <<= 1;
-		chigh <<= 1;
-		chigh++;
-		ccode <<= 1;
-		ccode |= read_bit();
+		clow_local <<= 1;
+		chigh_local <<= 1;
+		chigh_local++;
+		ccode_local <<= 1;
+		ccode_local |= read_bit();
 		nrbits = 0;
 	}
 	
 	// e3 scaling, to make sure that theres enough space between low and high
-	while ( ( clow >= CODER_LIMIT025 ) && ( chigh < CODER_LIMIT075 ) ) {
+	while ( (clow_local >= CODER_LIMIT025 ) && (chigh_local < CODER_LIMIT075 ) ) {
 		nrbits++;
-		clow  &= CODER_LIMIT025 - 1;
-		chigh ^= CODER_LIMIT025 + CODER_LIMIT050;
+		clow_local &= CODER_LIMIT025 - 1;
+		chigh_local ^= CODER_LIMIT025 + CODER_LIMIT050;
 		// clow  -= CODER_LIMIT025;
 		// chigh -= CODER_LIMIT025;
-		ccode -= CODER_LIMIT025;
-		clow  <<= 1;
-		chigh <<= 1;
-		chigh++;
-		ccode <<= 1;
-		ccode |= read_bit();
-	}	
+		ccode_local -= CODER_LIMIT025;
+		clow_local <<= 1;
+		chigh_local <<= 1;
+		chigh_local++;
+		ccode_local <<= 1;
+		ccode_local |= read_bit();
+	}
+
+	chigh = chigh_local;
+	clow = clow_local;
+	ccode = ccode_local;
 }
 
 /* -----------------------------------------------
