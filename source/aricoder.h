@@ -174,48 +174,16 @@ class model_b
 	inline void recursive_cleanup( table *context );
 };
 
+// Base case for shifting an arbitrary number of contexts into the model.
+template <typename M>
+static void shift_model(M model) {}
 
-/* -----------------------------------------------
-	shift context x2 model_s function
-	----------------------------------------------- */
-static inline void shift_model( model_s* model, int ctx1, int ctx2 )
-{
-	model->shift_context( ctx1 );
-	model->shift_context( ctx2 );
+// Shift an arbitrary number of contexts into the model (at most max_c contexts).
+template <typename M, typename C, typename... Cargs>
+static void shift_model(M model, C context, Cargs ... contextList) {
+	model->shift_context(context);
+	shift_model(model, contextList...);
 }
-
-
-/* -----------------------------------------------
-	shift context x3 model_s function
-	----------------------------------------------- */
-static inline void shift_model( model_s* model, int ctx1, int ctx2, int ctx3 )
-{
-	model->shift_context( ctx1 );
-	model->shift_context( ctx2 );
-	model->shift_context( ctx3 );
-}
-
-
-/* -----------------------------------------------
-	shift context x2 model_b function
-	----------------------------------------------- */
-static inline void shift_model( model_b* model, int ctx1, int ctx2 )
-{
-	model->shift_context( ctx1 );
-	model->shift_context( ctx2 );
-}
-
-
-/* -----------------------------------------------
-	shift context x3 model_b function
-	----------------------------------------------- */
-static inline void shift_model( model_b* model, int ctx1, int ctx2, int ctx3 )
-{
-	model->shift_context( ctx1 );
-	model->shift_context( ctx2 );
-	model->shift_context( ctx3 );
-}
-
 
 /* -----------------------------------------------
 	generic model_s encoder function
