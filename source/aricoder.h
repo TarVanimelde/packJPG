@@ -32,14 +32,14 @@ struct table {
 // holding additional info for a speedier 'totalize_table'
 struct table_s {
 	// counts for each symbol contained in the table
-	unsigned short* counts;
+	unsigned short* counts = nullptr;
 	// links to higher order contexts
-	struct table_s** links;
+	struct table_s** links = nullptr;
 	// link to lower order context
-	struct table_s* lesser;
+	struct table_s* lesser = nullptr;
 	// speedup info
-	unsigned short max_count;
-	unsigned short max_symbol;
+	unsigned short max_count = unsigned short(0);
+	unsigned short max_symbol = unsigned short(0);
 	// unsigned short esc_prob;
 };
 

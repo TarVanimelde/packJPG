@@ -2,6 +2,7 @@
 #include "bitops.h"
 #include "aricoder.h"
 #include <algorithm>
+#include <functional>
 
 #define ERROR_EXIT { error = true; exit( 0 ); }
 
@@ -307,7 +308,6 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	
 	// set up start table
 	start_table = new table_s;
-	start_table->counts = nullptr;
 	start_table->links = new table_s*[max_context];
 	std::fill(start_table->links, start_table->links + max_context, nullptr);
 	// set up internal counts
@@ -332,7 +332,6 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	for ( i = 1; i <= max_order; i++ ) {
 		// set up current order table
 		contexts[i] = new table_s;
-		contexts[i]->counts = nullptr;
 		contexts[ i ]->max_count  = 0;
 		contexts[ i ]->max_symbol = 0;
 		// build forward and backward links
@@ -340,9 +339,6 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 		if ( i < max_order ) {
 			contexts[i]->links = new table_s*[max_context];
 			std::fill(contexts[i]->links, contexts[i]->links + max_context, nullptr);
-		}
-		else {
-			contexts[ i ]->links = nullptr;
 		}
 		contexts[ i - 1 ]->links[ 0 ] = contexts[ i ];
 	}
@@ -436,16 +432,13 @@ void model_s::shift_context( int c )
 			// reserve memory for next table_s
 			context = new table_s;		
 			// set counts nullptr
-			context->counts = nullptr;
 			// setup internal counts
 			context->max_count  = 0;
 			context->max_symbol = 0;
 			// link lesser context later if not existing, this is done below
 			context->lesser = contexts[ i - 2 ]->links[ c ];
 			// finished here if this is a max order context
-			if ( i == max_order )
-				context->links = nullptr;
-			else {
+			if ( i < max_order ) {
 				// build links to higher order tables otherwise
 				context->links = new table_s*[max_context];
 				std::fill(context->links, context->links + max_context, nullptr);
@@ -574,26 +567,26 @@ void model_s::get_symbol_scale( symbol *s )
 	converts a count to an int, called after get_symbol_scale
 	----------------------------------------------- */
 	
-int model_s::convert_symbol_to_int( int count, symbol *s )
+int model_s::convert_symbol_to_int(int count, symbol *s)
 {
 	// seek the symbol that matches the count,
 	// also, set low- and high count for the symbol - it has to be removed from the stream
-	
-	int c;
-	
+
+
 	// go through the totals table, search the symbol that matches the count
-	for ( c = 1; count < (signed) totals[ c ]; c++ );	
+	int c;
+	for (c = 1; count < (signed) totals[c]; c++);	
 	// set up the current symbol
-	s->low_count  = totals[ c ];
-	s->high_count = totals[ c - 1 ];
+	s->low_count = totals[c]; // It is guaranteed that there exists such a symbol.
+	s->high_count = totals[c - 1]; // This is guaranteed to not go out of bounds since the search started at index 1 of totals.
 	// send escape if escape symbol encountered
-	if ( c == 1 ) {
+	if (c == 1) {
 		current_order--;
 		return ESCAPE_SYMBOL;
 	}
 	
 	// return symbol value
-	return ( c - 2 );
+	return c - 2 ; // Since c is not one and is a positive number, this will be nonnegative.
 }
 
 
