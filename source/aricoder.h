@@ -19,13 +19,13 @@ struct symbol {
 // holding all info needed for one context
 struct table {
 	// counts for each symbol contained in the table
-	unsigned short* counts;
+	unsigned short* counts = nullptr;
 	// links to higher order contexts
-	struct table** links;
+	struct table** links = nullptr;
 	// link to lower order context
-	struct table* lesser;	
+	struct table* lesser = nullptr;
 	// accumulated counts
-	unsigned int scale;
+	unsigned int scale = 0;
 };
 
 // special table struct, used in in model_s,

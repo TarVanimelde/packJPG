@@ -772,14 +772,12 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	
 	// set up null table
 	null_table = new table;
-	null_table->lesser = nullptr;
 	null_table->counts = new unsigned short[2];
 	std::fill_n(null_table->counts, 2, unsigned short(1));
 	null_table->scale = 2;
 	
 	// set up start table
 	start_table = new table;
-	start_table->counts = nullptr;
 	start_table->links = new table*[max_context];
 	std::fill_n(start_table->links, max_context, nullptr);
 	start_table->scale = 0;
@@ -801,16 +799,12 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	for ( i = 1; i <= max_order; i++ ) {
 		// set up current order table
 		contexts[i] = new table;
-		contexts[i]->counts = nullptr;
 		contexts[ i ]->scale = 0;
 		// build forward and backward links
 		contexts[ i ]->lesser = contexts[ i - 1 ];
 		if ( i < max_order ) {
 			contexts[i]->links = new table*[max_context];
 			std::fill_n(contexts[i]->links, max_context, nullptr);
-		}
-		else {
-			contexts[ i ]->links = nullptr;
 		}
 		contexts[ i - 1 ]->links[ 0 ] = contexts[ i ];
 	}
@@ -889,15 +883,11 @@ void model_b::shift_context( int c )
 			// reserve memory for next table
 			context = new table;		
 			// set internal counts nullptr
-			context->counts = nullptr;
 			context->scale  = 0;	
 			// link lesser context later if not existing, this is done below
 			context->lesser = contexts[ i - 2 ]->links[ c ];
 			// finished here if this is a max order context
-			if ( i == max_order) {
-				context->links = nullptr;
-			}
-			else {
+			if ( i < max_order) {
 				// build links to higher order tables otherwise
 				context->links = new table*[max_context];
 				std::fill_n(context->links, max_context, nullptr);
