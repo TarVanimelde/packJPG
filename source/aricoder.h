@@ -1,3 +1,6 @@
+#ifndef aricoder_h
+#define aricoder_h
+
 // defines for coder
 #define CODER_USE_BITS		31 // must never be above 31
 #define CODER_LIMIT100		( (unsigned int) ( 1 << CODER_USE_BITS ) )
@@ -7,6 +10,7 @@
 #define CODER_MAXSCALE		CODER_LIMIT025 - 1
 #define ESCAPE_SYMBOL		CODER_LIMIT025
 
+#include "bitops.h"
 
 // symbol struct, used in arithmetic coding
 struct symbol {
@@ -40,7 +44,6 @@ struct table_s {
 	// speedup info
 	unsigned short max_count = unsigned short(0);
 	unsigned short max_symbol = unsigned short(0);
-	// unsigned short esc_prob;
 };
 
 
@@ -112,9 +115,6 @@ class model_s
 	void get_symbol_scale( symbol *s );
 	int  convert_symbol_to_int( int count, symbol *s );
 	
-	bool error;
-	
-	
 	private:
 	
 	// unsigned short* totals;
@@ -154,10 +154,7 @@ class model_b
 	
 	int  convert_int_to_symbol( int c, symbol *s );
 	void get_symbol_scale( symbol *s );
-	int  convert_symbol_to_int( int count, symbol *s );
-	
-	bool error;
-	
+	int  convert_symbol_to_int( int count, symbol *s );	
 	
 	private:
 	
@@ -249,3 +246,5 @@ static inline int decode_ari( aricoder* decoder, model_b* model )
 	
 	return c;
 }
+
+#endif

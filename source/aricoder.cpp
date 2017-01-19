@@ -1,11 +1,10 @@
-#include <stdlib.h>
-#include "bitops.h"
 #include "aricoder.h"
+
+#include "bitops.h"
+
 #include <algorithm>
 #include <functional>
-
-#define ERROR_EXIT { error = true; exit( 0 ); }
-
+#include <stdlib.h>
 
 /* -----------------------------------------------
 	constructor for aricoder class
@@ -272,10 +271,6 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	table_s* null_table;
 	table_s* start_table;
 	int i;
-	
-	
-	// set error false
-	error = false;	
 	
 	// copy settings into model
 	max_symbol  = max_s;
@@ -753,9 +748,6 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	table* start_table;
 	int i;
 	
-	
-	// set error false
-	error = false;	
 	
 	// copy settings into model
 	max_context = max_c;

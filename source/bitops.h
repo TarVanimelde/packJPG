@@ -1,3 +1,6 @@
+#ifndef bitops_h
+#define bitops_h
+
 #define RBITS( c, n )		( c & ( 0xFF >> (8 - n) ) )
 #define LBITS( c, n )		( c >> (8 - n) )
 #define MBITS( c, l, r )	( RBITS( c,l ) >> r )
@@ -169,3 +172,5 @@ private:
 	StreamType srct;
 	int srcs;
 };
+
+#endif
