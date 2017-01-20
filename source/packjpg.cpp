@@ -306,8 +306,6 @@ packJPG by Matthias Stirner, 01/2016
 #define E_ENVLI(s,v)	( v - ( 1 << s ) )
 #define E_DEVLI(s,n)	( n + ( 1 << s ) )
 
-#define ABS(v1)			( (v1 < 0) ? -v1 : v1 )
-#define ABSDIFF(v1,v2)	( (v1 > v2) ? (v1 - v2) : (v2 - v1) )
 #define IPOS(w,v,h)		( ( v * w ) + h )
 #define NPOS(n1,n2,p)	( ( ( p / n1 ) * n2 ) + ( p % n1 ) )
 #define ROUND_F(v1)		( (v1 < 0) ? (int) (v1 - 0.5) : (int) (v1 + 0.5) )
@@ -322,15 +320,6 @@ packJPG by Matthias Stirner, 01/2016
 #define FWR_ERRMSG	"could not write file / file write-protected: %s"
 #define MSG_SIZE	128
 #define BARLEN		36
-
-// special realloc with guaranteed free() of previous memory
-static inline void* frealloc( void* ptr, size_t size ) {
-	void* n_ptr = realloc( ptr, (size) ? size : 1 );
-	if ( n_ptr == nullptr ) free( ptr );
-	return n_ptr;
-}
-
-
 
 /* -----------------------------------------------
 	struct declarations
@@ -4827,7 +4816,7 @@ static bool pjg_encode_dc( aricoder* enc, int cmp )
 		}
 		else {
 			// get absolute val, sign & bit length for current coefficient
-			absv = ABS( coeffs[dpos] );
+			absv = std::abs(coeffs[dpos]);
 			clen = BITLEN1024P( absv );
 			sgn = ( coeffs[dpos] > 0 ) ? 0 : 1;
 			// encode bit length of current coefficient
@@ -4996,7 +4985,7 @@ static bool pjg_encode_ac_high( aricoder* enc, int cmp )
 			}
 			else {
 				// get absolute val, sign & bit length for current coefficient
-				absv = ABS( coeffs[dpos] );
+				absv = std::abs(coeffs[dpos]);
 				clen = BITLEN1024P( absv );
 				sgn = ( coeffs[dpos] > 0 ) ? 0 : 1;
 				// encode bit length of current coefficient				
@@ -5156,7 +5145,7 @@ static bool pjg_encode_ac_low( aricoder* enc, int cmp )
 			}
 			else {
 				// get absolute val, sign & bit length for current coefficient
-				absv = ABS( coeffs[dpos] );
+				absv = std::abs(coeffs[dpos]);
 				clen = BITLEN2048N( absv );
 				sgn = ( coeffs[dpos] > 0 ) ? 0 : 1;
 				// encode bit length of current coefficient
@@ -5164,7 +5153,7 @@ static bool pjg_encode_ac_low( aricoder* enc, int cmp )
 				// encoding of residual
 				bp = clen - 2; // first set bit must be 1, so we start at clen - 2
 				ctx_res = ( bp >= thrs_bp ) ? 1 : 0;
-				ctx_abs = ABS( ctx_lak );
+				ctx_abs = std::abs(ctx_lak);
 				ctx_sgn = ( ctx_lak == 0 ) ? 0 : ( ctx_lak > 0 ) ? 1 : 2;
 				for ( ; bp >= thrs_bp; bp-- ) {						
 					shift_model( mod_top, ctx_abs >> thrs_bp, ctx_res, clen - thrs_bp ); // shift in 3 contexts
@@ -5822,7 +5811,7 @@ static bool pjg_decode_ac_low( aricoder* dec, int cmp )
 				// decoding of residual
 				bp = clen - 2; // first set bit must be 1, so we start at clen - 2
 				ctx_res = ( bp >= thrs_bp ) ? 1 : 0;
-				ctx_abs = ABS( ctx_lak );
+				ctx_abs = std::abs(ctx_lak);
 				ctx_sgn = ( ctx_lak == 0 ) ? 0 : ( ctx_lak > 0 ) ? 1 : 2;
 				for ( ; bp >= thrs_bp; bp-- ) {						
 					shift_model( mod_top, ctx_abs >> thrs_bp, ctx_res, clen - thrs_bp ); // shift in 3 contexts
@@ -6965,7 +6954,7 @@ static bool dump_dist()
 		for ( i = 0; i <= 1024; i++ ) dist[ i ] = 0;
 		// get distribution
 		for ( dpos = 0; dpos < cmpnfo[cmp].bc; dpos++ )
-			dist[ ABS( colldata[cmp][bpos][dpos] ) ]++;
+			dist[ std::abs(colldata[cmp][bpos][dpos]) ]++;
 		// write to file
 		fwrite( dist, sizeof( int ), 1024 + 1, fp );
 	}
