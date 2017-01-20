@@ -368,11 +368,11 @@ struct huffTree {
 	----------------------------------------------- */
 #if !defined( BUILD_LIB )
 static void initialize_options( int argc, char** argv );
-static void process_ui( void );
+static void process_ui();
 static inline const char* get_status( bool (*function)() );
-static void show_help( void );
+static void show_help();
 #endif
-static void process_file( void );
+static void process_file();
 static void execute( bool (*function)() );
 
 
@@ -380,31 +380,31 @@ static void execute( bool (*function)() );
 	function declarations: main functions
 	----------------------------------------------- */
 #if !defined( BUILD_LIB )
-static bool check_file( void );
-static bool swap_streams( void );
-static bool compare_output( void );
+static bool check_file();
+static bool swap_streams();
+static bool compare_output();
 #endif
-static bool reset_buffers( void );
-static bool read_jpeg( void );
-static bool merge_jpeg( void );
-static bool decode_jpeg( void );
-static bool recode_jpeg( void );
-static bool adapt_icos( void );
-static bool predict_dc( void );
-static bool unpredict_dc( void );
-static bool check_value_range( void );
-static bool calc_zdst_lists( void );
-static bool pack_pjg( void );
-static bool unpack_pjg( void );
+static bool reset_buffers();
+static bool read_jpeg();
+static bool merge_jpeg();
+static bool decode_jpeg();
+static bool recode_jpeg();
+static bool adapt_icos();
+static bool predict_dc();
+static bool unpredict_dc();
+static bool check_value_range();
+static bool calc_zdst_lists();
+static bool pack_pjg();
+static bool unpack_pjg();
 
 
 /* -----------------------------------------------
 	function declarations: jpeg-specific
 	----------------------------------------------- */
 
-static bool jpg_setup_imginfo( void );
+static bool jpg_setup_imginfo();
 static bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char* segment );
-static bool jpg_rebuild_header( void );
+static bool jpg_rebuild_header();
 
 static int jpg_decode_block_seq( abitreader* huffr, huffTree* dctree, huffTree* actree, short* block );
 static int jpg_encode_block_seq( abitwriter* huffw, huffCodes* dctbl, huffCodes* actbl, short* block );
@@ -458,8 +458,8 @@ static bool pjg_decode_generic( aricoder* dec, unsigned char** data, int* len );
 static bool pjg_decode_bit( aricoder* dec, unsigned char* bit );
 
 static void pjg_get_zerosort_scan( unsigned char* sv, int cmp );
-static bool pjg_optimize_header( void );
-static bool pjg_unoptimize_header( void );
+static bool pjg_optimize_header();
+static bool pjg_unoptimize_header();
 
 static void pjg_aavrg_prepare( unsigned short** abs_coeffs, int* weights, unsigned short* abs_store, int cmp );
 static int pjg_aavrg_context( unsigned short** abs_coeffs, int* weights, int pos, int p_y, int p_x, int r_x );
@@ -511,15 +511,15 @@ static inline bool file_exists( const char* filename );
 // in any way to compress jpg or decompress pjg
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
 static int collmode = 0; // write mode for collections: 0 -> std, 1 -> dhf, 2 -> squ, 3 -> unc
-static bool dump_hdr( void );
-static bool dump_huf( void );
-static bool dump_coll( void );
-static bool dump_zdst( void );
+static bool dump_hdr();
+static bool dump_huf();
+static bool dump_coll();
+static bool dump_zdst();
 static bool dump_file( const char* base, const char* ext, void* data, int bpv, int size );
-static bool dump_errfile( void );
-static bool dump_info( void );
-static bool dump_dist( void );
-static bool dump_pgm( void );
+static bool dump_errfile();
+static bool dump_info();
+static bool dump_dist();
+static bool dump_pgm();
 #endif
 
 
@@ -1063,7 +1063,7 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
 	----------------------------------------------- */
 	
 #if defined(BUILD_LIB)
-EXPORT const char* pjglib_version_info( void )
+EXPORT const char* pjglib_version_info()
 {
 	static char v_info[ 256 ];
 	
@@ -1081,7 +1081,7 @@ EXPORT const char* pjglib_version_info( void )
 	----------------------------------------------- */
 	
 #if defined(BUILD_LIB)
-EXPORT const char* pjglib_short_name( void )
+EXPORT const char* pjglib_short_name()
 {
 	static char v_name[ 256 ];
 	
@@ -1261,7 +1261,7 @@ static void initialize_options( int argc, char** argv )
 	----------------------------------------------- */
 	
 #if !defined(BUILD_LIB)
-static void process_ui( void )
+static void process_ui()
 {
 	clock_t begin, end;
 	const char* actionmsg  = nullptr;
@@ -1484,7 +1484,7 @@ static inline const char* get_status( bool (*function)() )
 	----------------------------------------------- */
 	
 #if !defined(BUILD_LIB)
-static void show_help( void )
+static void show_help()
 {	
 	fprintf( msgout, "\n" );
 	fprintf( msgout, "Website: %s\n", website );
@@ -1529,7 +1529,7 @@ static void show_help( void )
 	processes one file
 	----------------------------------------------- */
 
-static void process_file( void )
+static void process_file()
 {	
 	if ( filetype == F_JPG ) {
 		switch ( action ) {
@@ -1756,7 +1756,7 @@ static void execute( bool (*function)() )
 	----------------------------------------------- */
 
 #if !defined(BUILD_LIB)
-static bool check_file( void )
+static bool check_file()
 {	
 	unsigned char fileid[ 2 ] = { 0, 0 };
 	const char* filename = filelist[ file_no ];
@@ -1864,7 +1864,7 @@ static bool check_file( void )
 	----------------------------------------------- */
 	
 #if !defined(BUILD_LIB)
-static bool swap_streams( void )	
+static bool swap_streams()	
 {
 	char dmp[ 2 ];
 	
@@ -1896,7 +1896,7 @@ static bool swap_streams( void )
 	----------------------------------------------- */
 
 #if !defined(BUILD_LIB)
-static bool compare_output( void )
+static bool compare_output()
 {
 	unsigned char* buff_ori;
 	unsigned char* buff_cmp;
@@ -1966,7 +1966,7 @@ static bool compare_output( void )
 	set each variable to its initial value
 	----------------------------------------------- */
 
-static bool reset_buffers( void )
+static bool reset_buffers()
 {
 	int cmp, bpos;
 	int i;
@@ -2065,7 +2065,7 @@ static bool reset_buffers( void )
 	Read in header & image data
 	----------------------------------------------- */
 	
-static bool read_jpeg( void )
+static bool read_jpeg()
 {
 	unsigned char* segment = nullptr; // storage for current segment
 	unsigned int   ssize = 1024; // current size of segment array
@@ -2281,7 +2281,7 @@ static bool read_jpeg( void )
 	Merges header & image data to jpeg
 	----------------------------------------------- */
 	
-static bool merge_jpeg( void )
+static bool merge_jpeg()
 {
 	unsigned char SOI[ 2 ] = { 0xFF, 0xD8 }; // SOI segment
 	unsigned char EOI[ 2 ] = { 0xFF, 0xD9 }; // EOI segment
@@ -2383,7 +2383,7 @@ static bool merge_jpeg( void )
 	JPEG decoding routine
 	----------------------------------------------- */
 
-static bool decode_jpeg( void )
+static bool decode_jpeg()
 {
 	abitreader* huffr; // bitwise reader for image data
 	
@@ -2739,7 +2739,7 @@ static bool decode_jpeg( void )
 	JPEG encoding routine
 	----------------------------------------------- */
 
-static bool recode_jpeg( void )
+static bool recode_jpeg()
 {
 	abitwriter*  huffw; // bitwise writer for image data
 	abytewriter* storw; // bytewise writer for storage of correction bits
@@ -3071,7 +3071,7 @@ static bool recode_jpeg( void )
 	adapt ICOS tables for quantizer tables
 	----------------------------------------------- */
 	
-static bool adapt_icos( void )
+static bool adapt_icos()
 {
 	unsigned short quant[ 64 ]; // local copy of quantization
 	int ipos;
@@ -3105,7 +3105,7 @@ static bool adapt_icos( void )
 	filter DC coefficients
 	----------------------------------------------- */
 
-static bool predict_dc( void )
+static bool predict_dc()
 {
 	signed short* coef;
 	int absmaxp;
@@ -3142,7 +3142,7 @@ static bool predict_dc( void )
 	unpredict DC coefficients
 	----------------------------------------------- */
 
-static bool unpredict_dc( void )
+static bool unpredict_dc()
 {	
 	signed short* coef;
 	int absmaxp;
@@ -3180,7 +3180,7 @@ static bool unpredict_dc( void )
 	checks range of values, error if out of bounds
 	----------------------------------------------- */
 
-static bool check_value_range( void )
+static bool check_value_range()
 {
 	int absmax;
 	int cmp, bpos, dpos;
@@ -3208,7 +3208,7 @@ static bool check_value_range( void )
 	calculate zero distribution lists
 	----------------------------------------------- */
 	
-static bool calc_zdst_lists( void )
+static bool calc_zdst_lists()
 {
 	int cmp, bpos, dpos;
 	int b_x, b_y;
@@ -3248,7 +3248,7 @@ static bool calc_zdst_lists( void )
 	packs all parts to compressed pjg
 	----------------------------------------------- */
 	
-static bool pack_pjg( void )
+static bool pack_pjg()
 {
 	aricoder* encoder;
 	unsigned char hcode;
@@ -3376,7 +3376,7 @@ static bool pack_pjg( void )
 	unpacks compressed pjg to colldata
 	----------------------------------------------- */
 	
-static bool unpack_pjg( void )
+static bool unpack_pjg()
 {
 	aricoder* decoder;
 	unsigned char hcode;
@@ -3474,7 +3474,7 @@ static bool unpack_pjg( void )
 /* -----------------------------------------------
 	Parses header for imageinfo
 	----------------------------------------------- */
-static bool jpg_setup_imginfo( void )
+static bool jpg_setup_imginfo()
 {
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
@@ -3877,7 +3877,7 @@ static bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 /* -----------------------------------------------
 	JFIF header rebuilding routine
 	----------------------------------------------- */
-static bool jpg_rebuild_header( void )
+static bool jpg_rebuild_header()
 {	
 	abytewriter* hdrw; // new header writer
 	
@@ -6041,7 +6041,7 @@ static void pjg_get_zerosort_scan( unsigned char* sv, int cmp )
 /* -----------------------------------------------
 	optimizes JFIF header for compression
 	----------------------------------------------- */
-static bool pjg_optimize_header( void )
+static bool pjg_optimize_header()
 {
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
@@ -6120,7 +6120,7 @@ static bool pjg_optimize_header( void )
 /* -----------------------------------------------
 	undoes the header optimizations
 	----------------------------------------------- */
-static bool pjg_unoptimize_header( void )
+static bool pjg_unoptimize_header()
 {
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
@@ -6718,7 +6718,7 @@ static inline bool file_exists( const char* filename )
 	Writes header file
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-static bool dump_hdr( void )
+static bool dump_hdr()
 {
 	const char* ext = "hdr";
 	const char* basename = filelist[ file_no ];
@@ -6735,7 +6735,7 @@ static bool dump_hdr( void )
 	Writes huffman coded file
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-static bool dump_huf( void )
+static bool dump_huf()
 {
 	const char* ext = "huf";
 	const char* basename = filelist[ file_no ];
@@ -6752,7 +6752,7 @@ static bool dump_huf( void )
 	Writes collections of DCT coefficients
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-static bool dump_coll( void )
+static bool dump_coll()
 {
 	FILE* fp;
 	
@@ -6863,7 +6863,7 @@ static bool dump_coll( void )
 	Writes zero distribution data to file;
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-static bool dump_zdst( void )
+static bool dump_zdst()
 {
 	const char* ext[4];
 	const char* basename;
@@ -6920,7 +6920,7 @@ static bool dump_file( const char* base, const char* ext, void* data, int bpv, i
 	Writes error info file
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-static bool dump_errfile( void )
+static bool dump_errfile()
 {
 	FILE* fp;
 	char* fn;
@@ -6967,7 +6967,7 @@ static bool dump_errfile( void )
 	Writes info to textfile
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-static bool dump_info( void )
+static bool dump_info()
 {	
 	FILE* fp;
 	char* fn;
@@ -7059,7 +7059,7 @@ static bool dump_info( void )
 	Writes distribution for use in valdist.h
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-static bool dump_dist( void )
+static bool dump_dist()
 {
 	FILE* fp;
 	char* fn;
@@ -7106,7 +7106,7 @@ static bool dump_dist( void )
 	Do inverse DCT and write pgms
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-static bool dump_pgm( void )
+static bool dump_pgm()
 {	
 	unsigned char* imgdata;
 	
