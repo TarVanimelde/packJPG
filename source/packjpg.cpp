@@ -549,13 +549,13 @@ static int            hufs             =    0  ;   // size of huffman data
 static int            hdrs             =    0  ;   // size of header
 static int            grbs             =    0  ;   // size of garbage
 
-static std::vector<unsigned int> rstp;// unsigned int*  rstp = nullptr;   // restart markers positions in huffdata
-static unsigned int*  scnp             =   nullptr;   // scan start positions in huffdata
+static std::vector<unsigned int> rstp; // restart markers positions in huffdata
+static std::vector<unsigned int> scnp; // scan start positions in huffdata
 static int            rstc             =    0  ;   // count of restart markers
 static int            scnc             =    0  ;   // count of scans
 static int            rsti             =    0  ;   // restart interval
 static char           padbit           =    -1 ;   // padbit (for huffman coding)
-static unsigned char* rst_err          =   nullptr;   // number of wrong-set RST markers per scan
+static std::vector<unsigned char> rst_err; // number of wrong-set RST markers per scan
 
 static unsigned char* zdstdata[4]      = { nullptr }; // zero distribution (# of non-zeroes) lists (for higher 7x7 block)
 static unsigned char* eobxhigh[4]      = { nullptr }; // eob in x direction (for higher 7x7 block)
@@ -1951,14 +1951,12 @@ static bool reset_buffers()
 	if ( hdrdata  != nullptr ) free ( hdrdata );
 	if ( huffdata != nullptr ) free ( huffdata );
 	if ( grbgdata != nullptr ) free ( grbgdata );
-	if ( rst_err  != nullptr ) free ( rst_err );
+	rst_err.clear();
 	rstp.clear();
-	if ( scnp     != nullptr ) free ( scnp );
+	scnp.clear();
 	hdrdata   = nullptr;
 	huffdata  = nullptr;
 	grbgdata  = nullptr;
-	rst_err   = nullptr;
-	scnp      = nullptr;
 	
 	// free image arrays
 	for ( cmp = 0; cmp < 4; cmp++ )	{
@@ -2102,23 +2100,13 @@ static bool read_jpeg()
 					else { // in all other cases leave it to the header parser routines
 						// store number of wrongly set rst markers
 						if ( crst > 0 ) {
-							if ( rst_err == nullptr ) {
-								rst_err = (unsigned char*) calloc( scnc + 1, sizeof( char ) );
-								if ( rst_err == nullptr ) {
-									sprintf( errormessage, MEM_ERRMSG );
-									errorlevel = 2;
-									return false;
-								}
+							if (rst_err.empty()) {
+								rst_err.resize(scnc + 1);
 							}
 						}
-						if ( rst_err != nullptr ) {
+						if ( !rst_err.empty()) {
 							// realloc and set only if needed
-							rst_err = ( unsigned char* ) frealloc( rst_err, ( scnc + 1 ) * sizeof( char ) );
-							if ( rst_err == nullptr ) {
-								sprintf( errormessage, MEM_ERRMSG );
-								errorlevel = 2;
-								return false;
-							}
+							rst_err.resize(scnc + 1);
 							if ( crst > 255 ) {
 								sprintf( errormessage, "Severe false use of RST markers (%i)", (int) crst );
 								errorlevel = 1;
@@ -2297,7 +2285,8 @@ static bool merge_jpeg()
 			}
 		}
 		// insert false rst markers at end if needed
-		if ( rst_err != nullptr ) {
+
+		if ( !rst_err.empty() ) {
 			while ( rst_err[ scan - 1 ] > 0 ) {
 				rst = 0xD0 + ( cpos % 8 );
 				str_out->write( &mrk, 1, 1 );
@@ -2748,13 +2737,7 @@ static bool recode_jpeg()
 		
 		
 		// (re)alloc scan positons array
-		if ( scnp == nullptr ) scnp = ( unsigned int* ) calloc( scnc + 2, sizeof( int ) );
-		else scnp = ( unsigned int* ) frealloc( scnp, ( scnc + 2 ) * sizeof( int ) );
-		if ( scnp == nullptr ) {
-			sprintf( errormessage, MEM_ERRMSG );
-			errorlevel = 2;
-			return false;
-		}
+		scnp.resize(scnc + 2);
 		
 		// (re)alloc restart marker positons array if needed
 		if ( rsti > 0 ) {
@@ -3243,10 +3226,10 @@ static bool pack_pjg()
 	// store padbit (padbit can't be retrieved from the header)
 	if ( !pjg_encode_bit( encoder, padbit ) ) return false;	
 	// also encode one bit to signal false/correct use of RST markers
-	if ( !pjg_encode_bit( encoder, ( rst_err == nullptr ) ? 0 : 1 ) ) return false;
+	if ( !pjg_encode_bit( encoder, rst_err.empty() ? 0 : 1 ) ) return false;
 	// encode # of false set RST markers per scan
-	if ( rst_err != nullptr )
-		if ( !pjg_encode_generic( encoder, rst_err, scnc ) ) return false;
+	if ( !rst_err.empty() )
+		if ( !pjg_encode_generic( encoder, rst_err.data(), scnc ) ) return false;
 	
 	// encode actual components data
 	for ( cmp = 0; cmp < cmpc; cmp++ ) {		
@@ -3368,8 +3351,10 @@ static bool unpack_pjg()
 	// decode one bit that signals false /correct use of RST markers
 	if ( !pjg_decode_bit( decoder, &cb ) ) return false;
 	// decode # of false set RST markers per scan only if available
-	if ( cb == 1 )
-		if ( !pjg_decode_generic( decoder, &rst_err, nullptr ) ) return false;
+	if (cb == 1) {
+		auto data = rst_err.data();
+		if (!pjg_decode_generic(decoder, &data, nullptr)) return false;
+	}
 	
 	// undo header optimizations
 	if ( !pjg_unoptimize_header() )	return false;	
