@@ -279,6 +279,7 @@ packJPG by Matthias Stirner, 01/2016
 #include "aricoder.h"
 #include "pjpgtbl.h"
 #include "dct8x8.h"
+#include <string>
 
 #if defined BUILD_DLL // define BUILD_LIB from the compiler options if you want to compile a DLL!
 	#define BUILD_LIB
@@ -495,11 +496,10 @@ static inline int plocoi( int a, int b, int c );
 	----------------------------------------------- */
 #if !defined( BUILD_LIB )
 static inline void progress_bar( int current, int last );
-static inline char* create_filename( const char* base, const char* extension );
-static inline char* unique_filename( const char* base, const char* extension );
-static inline void set_extension( char* filename, const char* extension );
-static inline void add_underscore( char* filename );
+static std::string create_filename(const std::string& base, const std::string& extension);
+static std::string unique_filename(const std::string& base, const std::string& extension);
 #endif
+static bool file_exists(const std::string& filename);
 static inline bool file_exists( const char* filename );
 
 
@@ -605,8 +605,8 @@ static int cs_sal       =   0  ; // successive approximation bit pos low
 	global variables: info about files
 	----------------------------------------------- */
 	
-static char*  jpgfilename = nullptr;	// name of JPEG file
-static char*  pjgfilename = nullptr;	// name of PJG file
+static std::string jpgfilename = "";	// name of JPEG file
+static std::string pjgfilename = "";	// name of PJG file
 static int    jpgfilesize;			// size of JPEG file
 static int    pjgfilesize;			// size of PJG file
 static int    jpegtype = 0;			// type of JPEG coding: 0->unknown, 1->sequential, 2->progressive
@@ -697,8 +697,8 @@ static const char*  author       = "Matthias Stirner / Se";
 static const char*  website      = "http://packjpg.encode.ru/";
 static const char*	copyright    = "2006-2016 HTW Aalen University & Matthias Stirner";
 static const char*  email        = "packjpg (at) matthiasstirner.com";
-static const char*  pjg_ext      = "pjg";
-static const char*  jpg_ext      = "jpg";
+static const std::string pjg_ext = "pjg";
+static const std::string jpg_ext = "jpg";
 #endif
 static const char   pjg_magic[] = { 'J', 'S' };
 
@@ -1335,9 +1335,9 @@ static void process_ui()
 	// delete if broken or if output not needed
 	if ( ( !pipe_on ) && ( ( errorlevel >= err_tol ) || ( action != A_COMPRESS ) ) ) {
 		if ( filetype == F_JPG ) {
-			if ( file_exists( pjgfilename ) ) remove( pjgfilename );
+			if ( file_exists( pjgfilename ) ) remove( pjgfilename.data());
 		} else if ( filetype == F_PJG ) {
-			if ( file_exists( jpgfilename ) ) remove( jpgfilename );
+			if ( file_exists( jpgfilename ) ) remove( jpgfilename.data());
 		}
 	}
 	
@@ -1759,11 +1759,11 @@ static void execute( bool (*function)() )
 static bool check_file()
 {	
 	unsigned char fileid[ 2 ] = { 0, 0 };
-	const char* filename = filelist[ file_no ];
+	const std::string filename = filelist[ file_no ];
 	
 	
 	// open input stream, check for errors
-	str_in = new iostream( (void*) filename, ( !pipe_on ) ? StreamType::kFile : StreamType::kStream, 0, StreamMode::kRead );
+	str_in = new iostream( (void*) filename.data(), ( !pipe_on ) ? StreamType::kFile : StreamType::kStream, 0, StreamMode::kRead );
 	if ( str_in->chkerr() ) {
 		sprintf( errormessage, FRD_ERRMSG, filename );
 		errorlevel = 2;
@@ -1771,8 +1771,12 @@ static bool check_file()
 	}
 	
 	// free memory from filenames if needed
-	if ( jpgfilename != nullptr ) free( jpgfilename ); jpgfilename = nullptr;
-	if ( pjgfilename != nullptr ) free( pjgfilename ); pjgfilename = nullptr;
+	if (jpgfilename != "") {
+		jpgfilename = "";
+	}
+	if (pjgfilename != "") {
+		pjgfilename = "";
+	}
 	
 	// immediately return error if 2 bytes can't be read
 	if ( str_in->read( fileid, 1, 2 ) != 2 ) { 
@@ -1788,20 +1792,19 @@ static bool check_file()
 		filetype = F_JPG;
 		// create filenames
 		if ( !pipe_on ) {
-			jpgfilename = (char*) calloc( strlen( filename ) + 1, sizeof( char ) );
-			strcpy( jpgfilename, filename );
+			jpgfilename = filename;
 			pjgfilename = ( overwrite ) ?
-				create_filename( filename, (char*) pjg_ext ) :
-				unique_filename( filename, (char*) pjg_ext );
+				create_filename( filename, pjg_ext ) :
+				unique_filename( filename, pjg_ext );
 		}
 		else {
-			jpgfilename = create_filename( "STDIN", nullptr );
-			pjgfilename = create_filename( "STDOUT", nullptr );
+			jpgfilename = create_filename("STDIN", "" );
+			pjgfilename = create_filename("STDOUT", "" );
 		}
 		// open output stream, check for errors
-		str_out = new iostream( (void*) pjgfilename, ( !pipe_on ) ? StreamType::kFile : StreamType::kStream, 0, StreamMode::kWrite );
+		str_out = new iostream( (void*) pjgfilename.data(), ( !pipe_on ) ? StreamType::kFile : StreamType::kStream, 0, StreamMode::kWrite );
 		if ( str_out->chkerr() ) {
-			sprintf( errormessage, FWR_ERRMSG, pjgfilename );
+			sprintf( errormessage, FWR_ERRMSG, pjgfilename.data());
 			errorlevel = 2;
 			return false;
 		}
@@ -1825,20 +1828,19 @@ static bool check_file()
 		filetype = F_PJG;
 		// create filenames
 		if ( !pipe_on ) {
-			pjgfilename = (char*) calloc( strlen( filename ) + 1, sizeof( char ) );
-			strcpy( pjgfilename, filename );
+			pjgfilename = filename;
 			jpgfilename = ( overwrite ) ?
-				create_filename( filename, (char*) jpg_ext ) :
-				unique_filename( filename, (char*) jpg_ext );
+				create_filename( filename, jpg_ext ) :
+				unique_filename( filename, jpg_ext );
 		}
 		else {
 			jpgfilename = create_filename( "STDOUT", nullptr );
 			pjgfilename = create_filename( "STDIN", nullptr );
 		}
 		// open output stream, check for errors
-		str_out = new iostream( (void*) jpgfilename, ( !pipe_on ) ? StreamType::kFile : StreamType::kStream, 0, StreamMode::kWrite );
+		str_out = new iostream( (void*) jpgfilename.data(), ( !pipe_on ) ? StreamType::kFile : StreamType::kStream, 0, StreamMode::kWrite );
 		if ( str_out->chkerr() ) {
-			sprintf( errormessage, FWR_ERRMSG, jpgfilename );
+			sprintf( errormessage, FWR_ERRMSG, jpgfilename.data());
 			errorlevel = 2;
 			return false;
 		}
@@ -1848,7 +1850,7 @@ static bool check_file()
 	else {
 		// file is neither
 		filetype = F_UNK;
-		sprintf( errormessage, "filetype of file \"%s\" is unknown", filename );
+		sprintf( errormessage, "filetype of file \"%s\" is unknown", filename.data());
 		errorlevel = 2;
 		return false;		
 	}
@@ -6610,16 +6612,9 @@ static inline void progress_bar( int current, int last )
 	creates filename, callocs memory for it
 	----------------------------------------------- */
 #if !defined(BUILD_LIB)
-static inline char* create_filename( const char* base, const char* extension )
-{
-	int len = strlen( base ) + ( ( extension == nullptr ) ? 0 : strlen( extension ) + 1 ) + 1;	
-	char* filename = (char*) calloc( len, sizeof( char ) );	
-	
-	// create a filename from base & extension
-	strcpy( filename, base );
-	set_extension( filename, extension );
-	
-	return filename;
+
+static std::string create_filename(const std::string& base, const std::string& extension) {
+	return base + "." + extension;
 }
 #endif
 
@@ -6627,72 +6622,24 @@ static inline char* create_filename( const char* base, const char* extension )
 	creates filename, callocs memory for it
 	----------------------------------------------- */
 #if !defined(BUILD_LIB)
-static inline char* unique_filename( const char* base, const char* extension )
-{
-	int len = strlen( base ) + ( ( extension == nullptr ) ? 0 : strlen( extension ) + 1 ) + 1;	
-	char* filename = (char*) calloc( len, sizeof( char ) );	
-	
-	// create a unique filename using underscores
-	strcpy( filename, base );
-	set_extension( filename, extension );
-	while ( file_exists( filename ) ) {
-		len += sizeof( char );
-		filename = (char*) realloc( filename, len );
-		add_underscore( filename );
+
+static std::string get_base(const std::string& base) {
+	auto last_dot_pos = base.find_last_of(std::string("."));
+	return base.substr(0, last_dot_pos);
+}
+
+static std::string unique_filename(const std::string& base, const std::string& extension) {
+	auto unique_base = get_base(base);
+	while (file_exists(unique_base + "." + extension)) {
+		unique_base += "_";
 	}
-	
-	return filename;
+	return unique_base + "." + extension;
 }
 #endif
 
-/* -----------------------------------------------
-	changes extension of filename
-	----------------------------------------------- */
-#if !defined(BUILD_LIB)
-static inline void set_extension( char* filename, const char* extension )
-{
-	char* extstr;
-	
-	// find position of extension in filename	
-	extstr = ( strrchr( filename, '.' ) == nullptr ) ?
-		strrchr( filename, '\0' ) : strrchr( filename, '.' );
-	
-	// set new extension
-	if ( extension != nullptr ) {
-		(*extstr++) = '.';
-		strcpy( extstr, extension );
-	}
-	else
-		(*extstr) = '\0';
+static bool file_exists(const std::string& filename) {
+	return file_exists(filename.data());
 }
-#endif
-
-/* -----------------------------------------------
-	adds underscore after filename
-	----------------------------------------------- */
-#if !defined(BUILD_LIB)
-static inline void add_underscore( char* filename )
-{
-	char* tmpname = (char*) calloc( strlen( filename ) + 1, sizeof( char ) );
-	char* extstr;
-	
-	// copy filename to tmpname
-	strcpy( tmpname, filename );
-	// search extension in filename
-	extstr = strrchr( filename, '.' );
-	
-	// add underscore before extension
-	if ( extstr != nullptr ) {
-		(*extstr++) = '_';
-		strcpy( extstr, strrchr( tmpname, '.' ) );
-	}
-	else
-		sprintf( filename, "%s_", tmpname );
-		
-	// free memory
-	free( tmpname );
-}
-#endif
 
 /* -----------------------------------------------
 	checks if a file exists
