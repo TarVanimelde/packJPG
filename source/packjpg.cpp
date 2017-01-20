@@ -929,9 +929,9 @@ EXPORT bool pjglib_convert_stream2mem( unsigned char** out_file, unsigned int* o
 	if ( errorlevel >= err_tol ) {
 		if ( lib_out_type == 0 ) {
 			if ( filetype == F_JPG ) {
-				if ( file_exists( pjgfilename ) ) remove( pjgfilename );
+				if ( file_exists( pjgfilename ) ) remove( pjgfilename.data() );
 			} else if ( filetype == F_PJG ) {
-				if ( file_exists( jpgfilename ) ) remove( jpgfilename );
+				if ( file_exists( jpgfilename ) ) remove( jpgfilename.data());
 			}
 		}
 		if ( msg != nullptr ) strcpy( msg, errormessage );
@@ -948,11 +948,11 @@ EXPORT bool pjglib_convert_stream2mem( unsigned char** out_file, unsigned int* o
 		{
 			case F_JPG:
 				sprintf( msg, "Compressed to %s (%.2f%%) in %ims",
-					pjgfilename, cr, ( total >= 0 ) ? total : -1 );
+					pjgfilename.data(), cr, ( total >= 0 ) ? total : -1 );
 				break;
 			case F_PJG:
 				sprintf( msg, "Decompressed to %s (%.2f%%) in %ims",
-					jpgfilename, cr, ( total >= 0 ) ? total : -1 );
+					jpgfilename.data(), cr, ( total >= 0 ) ? total : -1 );
 				break;
 			case F_UNK:
 				sprintf( msg, "Unknown filetype" );
@@ -1020,8 +1020,12 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
 	}
 	
 	// free memory from filenames if needed
-	if ( jpgfilename != nullptr ) free( jpgfilename ); jpgfilename = nullptr;
-	if ( pjgfilename != nullptr ) free( pjgfilename ); pjgfilename = nullptr;
+	if (jpgfilename != "") {
+		jpgfilename = "";
+	}
+	if (pjgfilename != "") {
+		pjgfilename = "";
+	}
 	
 	// check input stream
 	str_in->read( buffer, 1, 2 );
@@ -1029,19 +1033,15 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
 		// file is JPEG
 		filetype = F_JPG;
 		// copy filenames
-		jpgfilename = (char*) calloc( (  in_type == 0 ) ? strlen( (char*) in_src   ) + 1 : 32, sizeof( char ) );
-		pjgfilename = (char*) calloc( ( out_type == 0 ) ? strlen( (char*) out_dest ) + 1 : 32, sizeof( char ) );
-		strcpy( jpgfilename, (  in_type == 0 ) ? (char*) in_src   : "JPG in memory" );
-		strcpy( pjgfilename, ( out_type == 0 ) ? (char*) out_dest : "PJG in memory" );
+		jpgfilename = (  in_type == 0 ) ? (char*) in_src   : "JPG in memory";
+		pjgfilename = ( out_type == 0 ) ? (char*) out_dest : "PJG in memory";
 	}
 	else if ( (buffer[0] == pjg_magic[0]) && (buffer[1] == pjg_magic[1]) ) {
 		// file is PJG
 		filetype = F_PJG;
 		// copy filenames
-		pjgfilename = (char*) calloc( (  in_type == 0 ) ? strlen( (char*) in_src   ) + 1 : 32, sizeof( char ) );
-		jpgfilename = (char*) calloc( ( out_type == 0 ) ? strlen( (char*) out_dest ) + 1 : 32, sizeof( char ) );
-		strcpy( pjgfilename, (  in_type == 0 ) ? (char*) in_src   : "PJG in memory" );
-		strcpy( jpgfilename, ( out_type == 0 ) ? (char*) out_dest : "JPG in memory" );
+		pjgfilename = (  in_type == 0 ) ? (char*) in_src   : "PJG in memory";
+		jpgfilename = ( out_type == 0 ) ? (char*) out_dest : "JPG in memory";
 	}
 	else {
 		// file is neither
@@ -1886,23 +1886,14 @@ static bool swap_streams()
 #if !defined(BUILD_LIB)
 static bool compare_output()
 {
-	unsigned char* buff_ori;
-	unsigned char* buff_cmp;
 	int bsize = 1024;
 	int dsize;
 	int i, b;
 	
 	
 	// init buffer arrays
-	buff_ori = ( unsigned char* ) calloc( bsize, sizeof( char ) );
-	buff_cmp = ( unsigned char* ) calloc( bsize, sizeof( char ) );
-	if ( ( buff_ori == nullptr ) || ( buff_cmp == nullptr ) ) {
-		if ( buff_ori != nullptr ) free( buff_ori );
-		if ( buff_cmp != nullptr ) free( buff_cmp );
-		sprintf( errormessage, MEM_ERRMSG );
-		errorlevel = 2;
-		return false;
-	}
+	std::vector<unsigned char> buff_ori(bsize);
+	std::vector<unsigned char> buff_cmp(bsize);
 	
 	// switch output stream mode / check for stream errors
 	str_out->switch_mode();
@@ -1930,8 +1921,8 @@ static bool compare_output()
 	for ( i = 0; i < dsize; i++ ) {
 		b = i % bsize;
 		if ( b == 0 ) {
-			str_str->read( buff_ori, sizeof( char ), bsize );
-			str_out->read( buff_cmp, sizeof( char ), bsize );
+			str_str->read( buff_ori.data(), sizeof( char ), bsize );
+			str_out->read( buff_cmp.data(), sizeof( char ), bsize );
 		}
 		if ( buff_ori[ b ] != buff_cmp[ b ] ) {
 			sprintf( errormessage, "difference found at 0x%X", i );
@@ -1939,10 +1930,6 @@ static bool compare_output()
 			return false;
 		}
 	}
-	
-	// free buffers
-	free( buff_ori );
-	free( buff_cmp );
 	
 	
 	return true;
