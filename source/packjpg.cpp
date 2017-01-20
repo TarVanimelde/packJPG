@@ -1505,8 +1505,8 @@ static void show_help()
 	}
 	#endif
 	fprintf( msgout, "\n" );
-	fprintf( msgout, "Examples: \"%s -v1 -o baboon.%s\"\n", appname, pjg_ext );
-	fprintf( msgout, "          \"%s -p *.%s\"\n", appname, jpg_ext );	
+	fprintf( msgout, "Examples: \"%s -v1 -o baboon.%s\"\n", appname, pjg_ext.data() );
+	fprintf( msgout, "          \"%s -p *.%s\"\n", appname, jpg_ext.data());
 }
 #endif
 
@@ -1751,7 +1751,7 @@ static bool check_file()
 	// open input stream, check for errors
 	str_in = new iostream( (void*) filename.data(), ( !pipe_on ) ? StreamType::kFile : StreamType::kStream, 0, StreamMode::kRead );
 	if ( str_in->chkerr() ) {
-		sprintf( errormessage, FRD_ERRMSG, filename );
+		sprintf( errormessage, FRD_ERRMSG, filename.data());
 		errorlevel = 2;
 		return false;
 	}
@@ -2055,8 +2055,6 @@ static bool reset_buffers()
 	
 static bool read_jpeg()
 {
-	unsigned char* segment = nullptr; // storage for current segment
-	unsigned int   ssize = 1024; // current size of segment array
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
 	unsigned int   crst = 0; // current rst marker counter
@@ -2080,12 +2078,7 @@ static bool read_jpeg()
 	hufs  = 0; // size of image data, start with 0
 	
 	// alloc memory for segment data first
-	segment = ( unsigned char* ) calloc( ssize, sizeof( char ) );
-	if ( segment == nullptr ) {
-		sprintf( errormessage, MEM_ERRMSG );
-		errorlevel = 2;
-		return false;
-	}
+	std::vector<unsigned char> segment(1024); // Storage for current segment.
 	
 	// JPEG reader loop
 	while ( true ) {
@@ -2165,19 +2158,18 @@ static bool read_jpeg()
 		}
 		else {
 			// read in next marker
-			if ( str_in->read( segment, 1, 2 ) != 2 ) break;
+			if ( str_in->read( segment.data(), 1, 2 ) != 2 ) break;
 			if ( segment[ 0 ] != 0xFF ) {
 				// ugly fix for incorrect marker segment sizes
 				sprintf( errormessage, "size mismatch in marker segment FF %2X", type );
 				errorlevel = 2;
 				if ( type == 0xFE ) { //  if last marker was COM try again
-					if ( str_in->read( segment, 1, 2 ) != 2 ) break;
+					if ( str_in->read( segment.data(), 1, 2 ) != 2 ) break;
 					if ( segment[ 0 ] == 0xFF ) errorlevel = 1;
 				}
 				if ( errorlevel == 2 ) {
 					delete ( hdrw );
 					delete ( huffw );
-					free ( segment );
 					return false;
 				}
 			}
@@ -2199,33 +2191,25 @@ static bool read_jpeg()
 		}
 		
 		// read in next segments' length and check it
-		if ( str_in->read( segment + 2, 1, 2 ) != 2 ) break;
+		if ( str_in->read( segment.data() + 2, 1, 2 ) != 2 ) break;
 		len = 2 + B_SHORT( segment[ 2 ], segment[ 3 ] );
 		if ( len < 4 ) break;
 		
 		// realloc segment data if needed
-		if ( ssize < len ) {
-			segment = ( unsigned char* ) frealloc( segment, len );
-			if ( segment == nullptr ) {
-				sprintf( errormessage, MEM_ERRMSG );
-				errorlevel = 2;
-				delete ( hdrw );
-				delete ( huffw );
-				return false;
-			}
-			ssize = len;
+		if ( segment.size() < len ) {
+			segment.resize(len);
 		}
 		
 		// read rest of segment, store back in header writer
-		if ( str_in->read( ( segment + 4 ), 1, ( len - 4 ) ) !=
+		if ( str_in->read( ( segment.data() + 4 ), 1, ( len - 4 ) ) !=
 			( unsigned short ) ( len - 4 ) ) break;
-		hdrw->write_n( segment, len );
+		hdrw->write_n( segment.data(), len );
 	}
 	// JPEG reader loop end
 	
 	// free writers
-	delete ( hdrw );
-	delete ( huffw );
+	delete hdrw;
+	delete huffw;
 	
 	// check if everything went OK
 	if ( ( hdrs == 0 ) || ( hufs == 0 ) ) {
@@ -2240,17 +2224,14 @@ static bool read_jpeg()
 		grbgw = new abytewriter( 1024 );
 		grbgw->write( tmp );
 		while( true ) {
-			len = str_in->read( segment, 1, ssize );
+			len = str_in->read( segment.data(), 1, segment.size() );
 			if ( len == 0 ) break;
-			grbgw->write_n( segment, len );
+			grbgw->write_n( segment.data(), len );
 		}
 		grbgdata = grbgw->getptr();
 		grbs     = grbgw->getpos();
 		delete ( grbgw );
 	}
-	
-	// free segment
-	free( segment );
 	
 	// get filesize
 	jpgfilesize = str_in->getsize();	
