@@ -267,17 +267,12 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	// c_lim (maximum count) -> 2 <= c_lim <= 4096 (???)
 	// WARNING: this can be memory intensive, so don't overdo it
 	// max_s == 256; max_c == 256; max_o == 4 would be way too much
-
-	table_s* null_table;
-	table_s* start_table;
-	int i;
 	
 	// copy settings into model
 	max_symbol  = max_s;
 	max_context = max_c;
 	max_order   = max_o;
 	max_count   = c_lim;
-	
 	
 	// alloc memory for totals table
 	totals = new unsigned int[max_symbol + 2];
@@ -291,9 +286,8 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	// set current order
 	current_order = max_order;
 	
-	
 	// set up null table
-	null_table = new table_s;
+	table_s* null_table = new table_s;
 	null_table->counts = new unsigned short[max_symbol];
 	std::fill(null_table->counts, null_table->counts + max_symbol, unsigned short(1)); // Set all probabilities.
 
@@ -302,7 +296,7 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	null_table->max_symbol = max_symbol;
 	
 	// set up start table
-	start_table = new table_s;
+	table_s* start_table = new table_s;
 	start_table->links = new table_s*[max_context];
 	std::fill(start_table->links, start_table->links + max_context, nullptr);
 	// set up internal counts
@@ -324,7 +318,7 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	contexts[  0 ] = start_table;
 	
 	// build initial 'normal' tables
-	for ( i = 1; i <= max_order; i++ ) {
+	for (int i = 1; i <= max_order; i++ ) {
 		// set up current order table
 		contexts[i] = new table_s;
 		contexts[ i ]->max_count  = 0;
@@ -743,26 +737,20 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	// ... (maximum symbol) -> 2 (0 or 1 )
 	// max_c (maximum context) -> 1 <= max_c <= 1024 (???)
 	// max_o (maximum order) -> -1 <= max_o <= 4
-
-	table* null_table;
-	table* start_table;
-	int i;
-	
 	
 	// copy settings into model
 	max_context = max_c;
 	max_order   = max_o;
 	max_count   = c_lim;
 	
-	
 	// set up null table
-	null_table = new table;
+	table* null_table = new table;
 	null_table->counts = new unsigned short[2];
 	std::fill_n(null_table->counts, 2, unsigned short(1));
 	null_table->scale = 2;
 	
 	// set up start table
-	start_table = new table;
+	table* start_table = new table;
 	start_table->links = new table*[max_context];
 	std::fill_n(start_table->links, max_context, nullptr);
 	start_table->scale = 0;
@@ -781,7 +769,7 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	contexts[  0 ] = start_table;
 	
 	// build initial 'normal' tables
-	for ( i = 1; i <= max_order; i++ ) {
+	for (int i = 1; i <= max_order; i++ ) {
 		// set up current order table
 		contexts[i] = new table;
 		contexts[ i ]->scale = 0;

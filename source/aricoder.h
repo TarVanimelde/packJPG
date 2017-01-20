@@ -1,16 +1,18 @@
 #ifndef aricoder_h
 #define aricoder_h
 
-// defines for coder
-#define CODER_USE_BITS		31 // must never be above 31
-#define CODER_LIMIT100		( (unsigned int) ( 1 << CODER_USE_BITS ) )
-#define CODER_LIMIT025		( ( CODER_LIMIT100 / 4 ) * 1 )
-#define CODER_LIMIT050		( ( CODER_LIMIT100 / 4 ) * 2 )
-#define CODER_LIMIT075		( ( CODER_LIMIT100 / 4 ) * 3 )
-#define CODER_MAXSCALE		CODER_LIMIT025 - 1
-#define ESCAPE_SYMBOL		CODER_LIMIT025
+#include <cstdint>
 
 #include "bitops.h"
+
+// defines for coder
+constexpr uint32_t CODER_USE_BITS = 31; // Must never be above 31.
+constexpr uint32_t CODER_LIMIT100 = uint32_t(1 << CODER_USE_BITS);
+constexpr uint32_t CODER_LIMIT025 = CODER_LIMIT100 / 4;
+constexpr uint32_t CODER_LIMIT050 = (CODER_LIMIT100 / 4) * 2;
+constexpr uint32_t CODER_LIMIT075 = (CODER_LIMIT100 / 4) * 3;
+constexpr uint32_t CODER_MAXSCALE = CODER_LIMIT025 - 1;
+constexpr uint32_t ESCAPE_SYMBOL = CODER_LIMIT025;
 
 // symbol struct, used in arithmetic coding
 struct symbol {
@@ -29,7 +31,7 @@ struct table {
 	// link to lower order context
 	struct table* lesser = nullptr;
 	// accumulated counts
-	unsigned int scale = 0;
+	unsigned int scale = unsigned int(0);
 };
 
 // special table struct, used in in model_s,
