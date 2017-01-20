@@ -549,7 +549,7 @@ static int            hufs             =    0  ;   // size of huffman data
 static int            hdrs             =    0  ;   // size of header
 static int            grbs             =    0  ;   // size of garbage
 
-static unsigned int*  rstp             =   nullptr;   // restart markers positions in huffdata
+static std::vector<unsigned int> rstp;// unsigned int*  rstp = nullptr;   // restart markers positions in huffdata
 static unsigned int*  scnp             =   nullptr;   // scan start positions in huffdata
 static int            rstc             =    0  ;   // count of restart markers
 static int            scnc             =    0  ;   // count of scans
@@ -1952,13 +1952,12 @@ static bool reset_buffers()
 	if ( huffdata != nullptr ) free ( huffdata );
 	if ( grbgdata != nullptr ) free ( grbgdata );
 	if ( rst_err  != nullptr ) free ( rst_err );
-	if ( rstp     != nullptr ) free ( rstp );
+	rstp.clear();
 	if ( scnp     != nullptr ) free ( scnp );
 	hdrdata   = nullptr;
 	huffdata  = nullptr;
 	grbgdata  = nullptr;
 	rst_err   = nullptr;
-	rstp      = nullptr;
 	scnp      = nullptr;
 	
 	// free image arrays
@@ -2288,7 +2287,7 @@ static bool merge_jpeg()
 			if ( huffdata[ ipos ] == 0xFF )
 				str_out->write( &stv, 1, 1 );
 			// insert restart markers if needed
-			if ( rstp != nullptr ) {
+			if ( !rstp.empty() ) {
 				if ( ipos == rstp[ rpos ] ) {
 					rst = 0xD0 + ( cpos % 8 );
 					str_out->write( &mrk, 1, 1 );
@@ -2761,13 +2760,7 @@ static bool recode_jpeg()
 		if ( rsti > 0 ) {
 			tmp = rstc + ( ( cs_cmpc > 1 ) ?
 				( mcuc / rsti ) : ( cmpnfo[ cs_cmp[ 0 ] ].bc / rsti ) );
-			if ( rstp == nullptr ) rstp = ( unsigned int* ) calloc( tmp + 1, sizeof( int ) );
-			else rstp = ( unsigned int* ) frealloc( rstp, ( tmp + 1 ) * sizeof( int ) );
-			if ( rstp == nullptr ) {
-				sprintf( errormessage, MEM_ERRMSG );
-				errorlevel = 2;
-				return false;
-			}
+			rstp.resize(tmp + 1);
 		}		
 		
 		// intial variables set for encoding
@@ -3013,7 +3006,7 @@ static bool recode_jpeg()
 	
 	// store last scan & restart positions
 	scnp[ scnc ] = hufs;
-	if ( rstp != nullptr )
+	if ( !rstp.empty() )
 		rstp[ rstc ] = hufs;
 	
 	
