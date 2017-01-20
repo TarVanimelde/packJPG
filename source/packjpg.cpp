@@ -621,8 +621,8 @@ static iostream* str_str = nullptr;	// storage stream
 static std::vector<std::string> filelist; // list of files to process 
 static int    file_no  = 0;			// number of current file
 
-static char** err_list = nullptr;		// list of error messages 
-static int*   err_tp   = nullptr;		// list of error types
+static std::vector<std::string> err_list;		// list of error messages 
+static std::vector<int> err_tp;		// list of error types
 #endif
 
 #if defined(DEV_INFOS)
@@ -763,10 +763,8 @@ int main( int argc, char** argv )
 		process_ui();
 		// store error message and type if any
 		if ( errorlevel > 0 ) {
-			err_list[ file_no ] = (char*) calloc( MSG_SIZE, sizeof( char ) );
+			err_list[file_no] = errormessage;
 			err_tp[ file_no ] = errorlevel;
-			if ( err_list[ file_no ] != nullptr )
-				strcpy( err_list[ file_no ], errormessage );
 		}
 		// count errors / warnings / file sizes
 		if ( errorlevel >= err_tol ) error_cnt++;
@@ -786,7 +784,7 @@ int main( int argc, char** argv )
 			fprintf( stderr, "------------------\n" );
 			for ( file_no = 0; file_no < filelist.size(); file_no++ ) {
 				if ( err_tp[ file_no ] >= err_tol ) {
-					fprintf( stderr, "%s (%s)\n", filelist[ file_no ].data(), err_list[ file_no ] );
+					fprintf( stderr, "%s (%s)\n", filelist[ file_no ].data(), err_list[ file_no ].data() );
 				}
 			}
 		}
@@ -796,7 +794,7 @@ int main( int argc, char** argv )
 			fprintf( stderr, "------------------\n" );
 			for ( file_no = 0; file_no < filelist.size(); file_no++ ) {
 				if ( err_tp[ file_no ] == 1 ) {
-					fprintf( stderr, "%s (%s)\n", filelist[ file_no ].data(), err_list[ file_no ] );
+					fprintf( stderr, "%s (%s)\n", filelist[ file_no ].data(), err_list[ file_no ].data());
 				}
 			}
 		}
@@ -1220,8 +1218,8 @@ static void initialize_options( int argc, char** argv )
 	}
 	
 	// alloc arrays for error messages and types storage
-	err_list = (char**) calloc(filelist.size(), sizeof( char* ) );
-	err_tp   = (int*) calloc(filelist.size(), sizeof( int ) );
+	err_list = std::vector<std::string>(filelist.size());
+	err_tp = std::vector<int>(filelist.size());
 	
 	// backup settings - needed to restore original setting later
 	if ( !auto_set ) {
