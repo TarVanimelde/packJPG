@@ -288,8 +288,6 @@ packJPG by Matthias Stirner, 01/2016
 	#include "packjpglib.h"
 #endif
 
-#define INTERN static
-
 #define INIT_MODEL_S(a,b,c) new model_s( a, b, c, 255 )
 #define INIT_MODEL_B(a,b)   new model_b( a, b, 255 )
 
@@ -326,7 +324,7 @@ packJPG by Matthias Stirner, 01/2016
 // special realloc with guaranteed free() of previous memory
 static inline void* frealloc( void* ptr, size_t size ) {
 	void* n_ptr = realloc( ptr, (size) ? size : 1 );
-	if ( n_ptr == NULL ) free( ptr );
+	if ( n_ptr == nullptr ) free( ptr );
 	return n_ptr;
 }
 
@@ -369,104 +367,104 @@ struct huffTree {
 	function declarations: main interface
 	----------------------------------------------- */
 #if !defined( BUILD_LIB )
-INTERN void initialize_options( int argc, char** argv );
-INTERN void process_ui( void );
-INTERN inline const char* get_status( bool (*function)() );
-INTERN void show_help( void );
+static void initialize_options( int argc, char** argv );
+static void process_ui( void );
+static inline const char* get_status( bool (*function)() );
+static void show_help( void );
 #endif
-INTERN void process_file( void );
-INTERN void execute( bool (*function)() );
+static void process_file( void );
+static void execute( bool (*function)() );
 
 
 /* -----------------------------------------------
 	function declarations: main functions
 	----------------------------------------------- */
 #if !defined( BUILD_LIB )
-INTERN bool check_file( void );
-INTERN bool swap_streams( void );
-INTERN bool compare_output( void );
+static bool check_file( void );
+static bool swap_streams( void );
+static bool compare_output( void );
 #endif
-INTERN bool reset_buffers( void );
-INTERN bool read_jpeg( void );
-INTERN bool merge_jpeg( void );
-INTERN bool decode_jpeg( void );
-INTERN bool recode_jpeg( void );
-INTERN bool adapt_icos( void );
-INTERN bool predict_dc( void );
-INTERN bool unpredict_dc( void );
-INTERN bool check_value_range( void );
-INTERN bool calc_zdst_lists( void );
-INTERN bool pack_pjg( void );
-INTERN bool unpack_pjg( void );
+static bool reset_buffers( void );
+static bool read_jpeg( void );
+static bool merge_jpeg( void );
+static bool decode_jpeg( void );
+static bool recode_jpeg( void );
+static bool adapt_icos( void );
+static bool predict_dc( void );
+static bool unpredict_dc( void );
+static bool check_value_range( void );
+static bool calc_zdst_lists( void );
+static bool pack_pjg( void );
+static bool unpack_pjg( void );
 
 
 /* -----------------------------------------------
 	function declarations: jpeg-specific
 	----------------------------------------------- */
 
-INTERN bool jpg_setup_imginfo( void );
-INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char* segment );
-INTERN bool jpg_rebuild_header( void );
+static bool jpg_setup_imginfo( void );
+static bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char* segment );
+static bool jpg_rebuild_header( void );
 
-INTERN int jpg_decode_block_seq( abitreader* huffr, huffTree* dctree, huffTree* actree, short* block );
-INTERN int jpg_encode_block_seq( abitwriter* huffw, huffCodes* dctbl, huffCodes* actbl, short* block );
+static int jpg_decode_block_seq( abitreader* huffr, huffTree* dctree, huffTree* actree, short* block );
+static int jpg_encode_block_seq( abitwriter* huffw, huffCodes* dctbl, huffCodes* actbl, short* block );
 
-INTERN int jpg_decode_dc_prg_fs( abitreader* huffr, huffTree* dctree, short* block );
-INTERN int jpg_encode_dc_prg_fs( abitwriter* huffw, huffCodes* dctbl, short* block );
-INTERN int jpg_decode_ac_prg_fs( abitreader* huffr, huffTree* actree, short* block,
+static int jpg_decode_dc_prg_fs( abitreader* huffr, huffTree* dctree, short* block );
+static int jpg_encode_dc_prg_fs( abitwriter* huffw, huffCodes* dctbl, short* block );
+static int jpg_decode_ac_prg_fs( abitreader* huffr, huffTree* actree, short* block,
 						int* eobrun, int from, int to );
-INTERN int jpg_encode_ac_prg_fs( abitwriter* huffw, huffCodes* actbl, short* block,
+static int jpg_encode_ac_prg_fs( abitwriter* huffw, huffCodes* actbl, short* block,
 						int* eobrun, int from, int to );
 
-INTERN int jpg_decode_dc_prg_sa( abitreader* huffr, short* block );
-INTERN int jpg_encode_dc_prg_sa( abitwriter* huffw, short* block );
-INTERN int jpg_decode_ac_prg_sa( abitreader* huffr, huffTree* actree, short* block,
+static int jpg_decode_dc_prg_sa( abitreader* huffr, short* block );
+static int jpg_encode_dc_prg_sa( abitwriter* huffw, short* block );
+static int jpg_decode_ac_prg_sa( abitreader* huffr, huffTree* actree, short* block,
 						int* eobrun, int from, int to );
-INTERN int jpg_encode_ac_prg_sa( abitwriter* huffw, abytewriter* storw, huffCodes* actbl,
+static int jpg_encode_ac_prg_sa( abitwriter* huffw, abytewriter* storw, huffCodes* actbl,
 						short* block, int* eobrun, int from, int to );
 
-INTERN int jpg_decode_eobrun_sa( abitreader* huffr, short* block, int* eobrun, int from, int to );
-INTERN int jpg_encode_eobrun( abitwriter* huffw, huffCodes* actbl, int* eobrun );
-INTERN int jpg_encode_crbits( abitwriter* huffw, abytewriter* storw );
+static int jpg_decode_eobrun_sa( abitreader* huffr, short* block, int* eobrun, int from, int to );
+static int jpg_encode_eobrun( abitwriter* huffw, huffCodes* actbl, int* eobrun );
+static int jpg_encode_crbits( abitwriter* huffw, abytewriter* storw );
 
-INTERN int jpg_next_huffcode( abitreader *huffw, huffTree *ctree );
-INTERN int jpg_next_mcupos( int* mcu, int* cmp, int* csc, int* sub, int* dpos, int* rstw );
-INTERN int jpg_next_mcuposn( int* cmp, int* dpos, int* rstw );
-INTERN int jpg_skip_eobrun( int* cmp, int* dpos, int* rstw, int* eobrun );
+static int jpg_next_huffcode( abitreader *huffw, huffTree *ctree );
+static int jpg_next_mcupos( int* mcu, int* cmp, int* csc, int* sub, int* dpos, int* rstw );
+static int jpg_next_mcuposn( int* cmp, int* dpos, int* rstw );
+static int jpg_skip_eobrun( int* cmp, int* dpos, int* rstw, int* eobrun );
 
-INTERN void jpg_build_huffcodes( unsigned char *clen, unsigned char *cval,
+static void jpg_build_huffcodes( unsigned char *clen, unsigned char *cval,
 				huffCodes *hc, huffTree *ht );
 
 /* -----------------------------------------------
 	function declarations: pjg-specific
 	----------------------------------------------- */
 	
-INTERN bool pjg_encode_zstscan( aricoder* enc, int cmp );
-INTERN bool pjg_encode_zdst_high( aricoder* enc, int cmp );
-INTERN bool pjg_encode_zdst_low( aricoder* enc, int cmp );
-INTERN bool pjg_encode_dc( aricoder* enc, int cmp );
-INTERN bool pjg_encode_ac_high( aricoder* enc, int cmp );
-INTERN bool pjg_encode_ac_low( aricoder* enc, int cmp );
-INTERN bool pjg_encode_generic( aricoder* enc, unsigned char* data, int len );
-INTERN bool pjg_encode_bit( aricoder* enc, unsigned char bit );
+static bool pjg_encode_zstscan( aricoder* enc, int cmp );
+static bool pjg_encode_zdst_high( aricoder* enc, int cmp );
+static bool pjg_encode_zdst_low( aricoder* enc, int cmp );
+static bool pjg_encode_dc( aricoder* enc, int cmp );
+static bool pjg_encode_ac_high( aricoder* enc, int cmp );
+static bool pjg_encode_ac_low( aricoder* enc, int cmp );
+static bool pjg_encode_generic( aricoder* enc, unsigned char* data, int len );
+static bool pjg_encode_bit( aricoder* enc, unsigned char bit );
 
-INTERN bool pjg_decode_zstscan( aricoder* dec, int cmp );
-INTERN bool pjg_decode_zdst_high( aricoder* dec, int cmp );
-INTERN bool pjg_decode_zdst_low( aricoder* dec, int cmp );
-INTERN bool pjg_decode_dc( aricoder* dec, int cmp );
-INTERN bool pjg_decode_ac_high( aricoder* dec, int cmp );
-INTERN bool pjg_decode_ac_low( aricoder* dec, int cmp );
-INTERN bool pjg_decode_generic( aricoder* dec, unsigned char** data, int* len );
-INTERN bool pjg_decode_bit( aricoder* dec, unsigned char* bit );
+static bool pjg_decode_zstscan( aricoder* dec, int cmp );
+static bool pjg_decode_zdst_high( aricoder* dec, int cmp );
+static bool pjg_decode_zdst_low( aricoder* dec, int cmp );
+static bool pjg_decode_dc( aricoder* dec, int cmp );
+static bool pjg_decode_ac_high( aricoder* dec, int cmp );
+static bool pjg_decode_ac_low( aricoder* dec, int cmp );
+static bool pjg_decode_generic( aricoder* dec, unsigned char** data, int* len );
+static bool pjg_decode_bit( aricoder* dec, unsigned char* bit );
 
-INTERN void pjg_get_zerosort_scan( unsigned char* sv, int cmp );
-INTERN bool pjg_optimize_header( void );
-INTERN bool pjg_unoptimize_header( void );
+static void pjg_get_zerosort_scan( unsigned char* sv, int cmp );
+static bool pjg_optimize_header( void );
+static bool pjg_unoptimize_header( void );
 
-INTERN void pjg_aavrg_prepare( unsigned short** abs_coeffs, int* weights, unsigned short* abs_store, int cmp );
-INTERN int pjg_aavrg_context( unsigned short** abs_coeffs, int* weights, int pos, int p_y, int p_x, int r_x );
-INTERN int pjg_lakh_context( signed short** coeffs_x, signed short** coeffs_a, int* pred_cf, int pos );
-INTERN void get_context_nnb( int pos, int w, int *a, int *b );
+static void pjg_aavrg_prepare( unsigned short** abs_coeffs, int* weights, unsigned short* abs_store, int cmp );
+static int pjg_aavrg_context( unsigned short** abs_coeffs, int* weights, int pos, int p_y, int p_x, int r_x );
+static int pjg_lakh_context( signed short** coeffs_x, signed short** coeffs_a, int* pred_cf, int pos );
+static void get_context_nnb( int pos, int w, int *a, int *b );
 
 
 /* -----------------------------------------------
@@ -474,10 +472,10 @@ INTERN void get_context_nnb( int pos, int w, int *a, int *b );
 	----------------------------------------------- */
 
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-INTERN int idct_2d_fst_8x8( int cmp, int dpos, int ix, int iy );
+static int idct_2d_fst_8x8( int cmp, int dpos, int ix, int iy );
 #endif
-INTERN int idct_2d_fst_1x8( int cmp, int dpos, int ix, int iy );
-INTERN int idct_2d_fst_8x1( int cmp, int dpos, int ix, int iy );
+static int idct_2d_fst_1x8( int cmp, int dpos, int ix, int iy );
+static int idct_2d_fst_8x1( int cmp, int dpos, int ix, int iy );
 
 
 /* -----------------------------------------------
@@ -485,26 +483,24 @@ INTERN int idct_2d_fst_8x1( int cmp, int dpos, int ix, int iy );
 	----------------------------------------------- */
 
 #if defined( USE_PLOCOI )
-INTERN int dc_coll_predictor( int cmp, int dpos );
+static int dc_coll_predictor( int cmp, int dpos );
 #else
-INTERN int dc_1ddct_predictor( int cmp, int dpos );
+static int dc_1ddct_predictor( int cmp, int dpos );
 #endif
-INTERN inline int plocoi( int a, int b, int c );
-INTERN inline int median_int( int* values, int size );
-INTERN inline float median_float( float* values, int size );
+static inline int plocoi( int a, int b, int c );
 
 
 /* -----------------------------------------------
 	function declarations: miscelaneous helpers
 	----------------------------------------------- */
 #if !defined( BUILD_LIB )
-INTERN inline void progress_bar( int current, int last );
-INTERN inline char* create_filename( const char* base, const char* extension );
-INTERN inline char* unique_filename( const char* base, const char* extension );
-INTERN inline void set_extension( char* filename, const char* extension );
-INTERN inline void add_underscore( char* filename );
+static inline void progress_bar( int current, int last );
+static inline char* create_filename( const char* base, const char* extension );
+static inline char* unique_filename( const char* base, const char* extension );
+static inline void set_extension( char* filename, const char* extension );
+static inline void add_underscore( char* filename );
 #endif
-INTERN inline bool file_exists( const char* filename );
+static inline bool file_exists( const char* filename );
 
 
 /* -----------------------------------------------
@@ -514,16 +510,16 @@ INTERN inline bool file_exists( const char* filename );
 // these are developers functions, they are not needed
 // in any way to compress jpg or decompress pjg
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-INTERN int collmode = 0; // write mode for collections: 0 -> std, 1 -> dhf, 2 -> squ, 3 -> unc
-INTERN bool dump_hdr( void );
-INTERN bool dump_huf( void );
-INTERN bool dump_coll( void );
-INTERN bool dump_zdst( void );
-INTERN bool dump_file( const char* base, const char* ext, void* data, int bpv, int size );
-INTERN bool dump_errfile( void );
-INTERN bool dump_info( void );
-INTERN bool dump_dist( void );
-INTERN bool dump_pgm( void );
+static int collmode = 0; // write mode for collections: 0 -> std, 1 -> dhf, 2 -> squ, 3 -> unc
+static bool dump_hdr( void );
+static bool dump_huf( void );
+static bool dump_coll( void );
+static bool dump_zdst( void );
+static bool dump_file( const char* base, const char* ext, void* data, int bpv, int size );
+static bool dump_errfile( void );
+static bool dump_info( void );
+static bool dump_dist( void );
+static bool dump_pgm( void );
 #endif
 
 
@@ -531,8 +527,8 @@ INTERN bool dump_pgm( void );
 	global variables: library only variables
 	----------------------------------------------- */
 #if defined(BUILD_LIB)
-INTERN int lib_in_type  = -1;
-INTERN int lib_out_type = -1;
+static int lib_in_type  = -1;
+static int lib_out_type = -1;
 #endif
 
 
@@ -540,39 +536,39 @@ INTERN int lib_out_type = -1;
 	global variables: data storage
 	----------------------------------------------- */
 
-INTERN unsigned short qtables[4][64];				// quantization tables
-INTERN huffCodes      hcodes[2][4];				// huffman codes
-INTERN huffTree       htrees[2][4];				// huffman decoding trees
-INTERN unsigned char  htset[2][4];					// 1 if huffman table is set
+static unsigned short qtables[4][64];				// quantization tables
+static huffCodes      hcodes[2][4];				// huffman codes
+static huffTree       htrees[2][4];				// huffman decoding trees
+static unsigned char  htset[2][4];					// 1 if huffman table is set
 
-INTERN unsigned char* grbgdata		   =   NULL;	// garbage data
-INTERN unsigned char* hdrdata          =   NULL;   // header data
-INTERN unsigned char* huffdata         =   NULL;   // huffman coded data
-INTERN int            hufs             =    0  ;   // size of huffman data
-INTERN int            hdrs             =    0  ;   // size of header
-INTERN int            grbs             =    0  ;   // size of garbage
+static unsigned char* grbgdata		   =   nullptr;	// garbage data
+static unsigned char* hdrdata          =   nullptr;   // header data
+static unsigned char* huffdata         =   nullptr;   // huffman coded data
+static int            hufs             =    0  ;   // size of huffman data
+static int            hdrs             =    0  ;   // size of header
+static int            grbs             =    0  ;   // size of garbage
 
-INTERN unsigned int*  rstp             =   NULL;   // restart markers positions in huffdata
-INTERN unsigned int*  scnp             =   NULL;   // scan start positions in huffdata
-INTERN int            rstc             =    0  ;   // count of restart markers
-INTERN int            scnc             =    0  ;   // count of scans
-INTERN int            rsti             =    0  ;   // restart interval
-INTERN char           padbit           =    -1 ;   // padbit (for huffman coding)
-INTERN unsigned char* rst_err          =   NULL;   // number of wrong-set RST markers per scan
+static unsigned int*  rstp             =   nullptr;   // restart markers positions in huffdata
+static unsigned int*  scnp             =   nullptr;   // scan start positions in huffdata
+static int            rstc             =    0  ;   // count of restart markers
+static int            scnc             =    0  ;   // count of scans
+static int            rsti             =    0  ;   // restart interval
+static char           padbit           =    -1 ;   // padbit (for huffman coding)
+static unsigned char* rst_err          =   nullptr;   // number of wrong-set RST markers per scan
 
-INTERN unsigned char* zdstdata[4]      = { NULL }; // zero distribution (# of non-zeroes) lists (for higher 7x7 block)
-INTERN unsigned char* eobxhigh[4]      = { NULL }; // eob in x direction (for higher 7x7 block)
-INTERN unsigned char* eobyhigh[4]      = { NULL }; // eob in y direction (for higher 7x7 block)
-INTERN unsigned char* zdstxlow[4]		= { NULL }; // # of non zeroes for first row
-INTERN unsigned char* zdstylow[4]		= { NULL }; // # of non zeroes for first collumn
-INTERN signed short*  colldata[4][64]  = {{NULL}}; // collection sorted DCT coefficients
+static unsigned char* zdstdata[4]      = { nullptr }; // zero distribution (# of non-zeroes) lists (for higher 7x7 block)
+static unsigned char* eobxhigh[4]      = { nullptr }; // eob in x direction (for higher 7x7 block)
+static unsigned char* eobyhigh[4]      = { nullptr }; // eob in y direction (for higher 7x7 block)
+static unsigned char* zdstxlow[4]		= { nullptr }; // # of non zeroes for first row
+static unsigned char* zdstylow[4]		= { nullptr }; // # of non zeroes for first collumn
+static signed short*  colldata[4][64]  = {{nullptr}}; // collection sorted DCT coefficients
 
-INTERN unsigned char* freqscan[4]      = { NULL }; // optimized order for frequency scans (only pointers to scans)
-INTERN unsigned char  zsrtscan[4][64];				// zero optimized frequency scan
+static unsigned char* freqscan[4]      = { nullptr }; // optimized order for frequency scans (only pointers to scans)
+static unsigned char  zsrtscan[4][64];				// zero optimized frequency scan
 
-INTERN int adpt_idct_8x8[ 4 ][ 8 * 8 * 8 * 8 ];	// precalculated/adapted values for idct (8x8)
-INTERN int adpt_idct_1x8[ 4 ][ 1 * 1 * 8 * 8 ];	// precalculated/adapted values for idct (1x8)
-INTERN int adpt_idct_8x1[ 4 ][ 8 * 8 * 1 * 1 ];	// precalculated/adapted values for idct (8x1)
+static int adpt_idct_8x8[ 4 ][ 8 * 8 * 8 * 8 ];	// precalculated/adapted values for idct (8x8)
+static int adpt_idct_1x8[ 4 ][ 1 * 1 * 8 * 8 ];	// precalculated/adapted values for idct (1x8)
+static int adpt_idct_8x1[ 4 ][ 8 * 8 * 1 * 1 ];	// precalculated/adapted values for idct (8x1)
 
 
 /* -----------------------------------------------
@@ -580,64 +576,64 @@ INTERN int adpt_idct_8x1[ 4 ][ 8 * 8 * 1 * 1 ];	// precalculated/adapted values 
 	----------------------------------------------- */
 
 // seperate info for each color component
-INTERN componentInfo cmpnfo[ 4 ];
+static componentInfo cmpnfo[ 4 ];
 
-INTERN int cmpc        = 0; // component count
-INTERN int imgwidth    = 0; // width of image
-INTERN int imgheight   = 0; // height of image
+static int cmpc        = 0; // component count
+static int imgwidth    = 0; // width of image
+static int imgheight   = 0; // height of image
 
-INTERN int sfhm        = 0; // max horizontal sample factor
-INTERN int sfvm        = 0; // max verical sample factor
-INTERN int mcuv        = 0; // mcus per line
-INTERN int mcuh        = 0; // mcus per collumn
-INTERN int mcuc        = 0; // count of mcus
+static int sfhm        = 0; // max horizontal sample factor
+static int sfvm        = 0; // max verical sample factor
+static int mcuv        = 0; // mcus per line
+static int mcuh        = 0; // mcus per collumn
+static int mcuc        = 0; // count of mcus
 
 
 /* -----------------------------------------------
 	global variables: info about current scan
 	----------------------------------------------- */
 
-INTERN int cs_cmpc      =   0  ; // component count in current scan
-INTERN int cs_cmp[ 4 ]  = { 0 }; // component numbers  in current scan
-INTERN int cs_from      =   0  ; // begin - band of current scan ( inclusive )
-INTERN int cs_to        =   0  ; // end - band of current scan ( inclusive )
-INTERN int cs_sah       =   0  ; // successive approximation bit pos high
-INTERN int cs_sal       =   0  ; // successive approximation bit pos low
+static int cs_cmpc      =   0  ; // component count in current scan
+static int cs_cmp[ 4 ]  = { 0 }; // component numbers  in current scan
+static int cs_from      =   0  ; // begin - band of current scan ( inclusive )
+static int cs_to        =   0  ; // end - band of current scan ( inclusive )
+static int cs_sah       =   0  ; // successive approximation bit pos high
+static int cs_sal       =   0  ; // successive approximation bit pos low
 	
 
 /* -----------------------------------------------
 	global variables: info about files
 	----------------------------------------------- */
 	
-INTERN char*  jpgfilename = NULL;	// name of JPEG file
-INTERN char*  pjgfilename = NULL;	// name of PJG file
-INTERN int    jpgfilesize;			// size of JPEG file
-INTERN int    pjgfilesize;			// size of PJG file
-INTERN int    jpegtype = 0;			// type of JPEG coding: 0->unknown, 1->sequential, 2->progressive
-INTERN int    filetype;				// type of current file
-INTERN iostream* str_in  = NULL;	// input stream
-INTERN iostream* str_out = NULL;	// output stream
+static char*  jpgfilename = nullptr;	// name of JPEG file
+static char*  pjgfilename = nullptr;	// name of PJG file
+static int    jpgfilesize;			// size of JPEG file
+static int    pjgfilesize;			// size of PJG file
+static int    jpegtype = 0;			// type of JPEG coding: 0->unknown, 1->sequential, 2->progressive
+static int    filetype;				// type of current file
+static iostream* str_in  = nullptr;	// input stream
+static iostream* str_out = nullptr;	// output stream
 
 #if !defined(BUILD_LIB)
-INTERN iostream* str_str = NULL;	// storage stream
+static iostream* str_str = nullptr;	// storage stream
 
-INTERN char** filelist = NULL;		// list of files to process 
-INTERN int    file_cnt = 0;			// count of files in list
-INTERN int    file_no  = 0;			// number of current file
+static char** filelist = nullptr;		// list of files to process 
+static int    file_cnt = 0;			// count of files in list
+static int    file_no  = 0;			// number of current file
 
-INTERN char** err_list = NULL;		// list of error messages 
-INTERN int*   err_tp   = NULL;		// list of error types
+static char** err_list = nullptr;		// list of error messages 
+static int*   err_tp   = nullptr;		// list of error types
 #endif
 
 #if defined(DEV_INFOS)
-INTERN int    dev_size_hdr      = 0;
-INTERN int    dev_size_cmp[ 4 ] = { 0 };
-INTERN int    dev_size_zsr[ 4 ] = { 0 };
-INTERN int    dev_size_dc[ 4 ]  = { 0 };
-INTERN int    dev_size_ach[ 4 ] = { 0 };
-INTERN int    dev_size_acl[ 4 ] = { 0 };
-INTERN int    dev_size_zdh[ 4 ] = { 0 };
-INTERN int    dev_size_zdl[ 4 ] = { 0 };
+static int    dev_size_hdr      = 0;
+static int    dev_size_cmp[ 4 ] = { 0 };
+static int    dev_size_zsr[ 4 ] = { 0 };
+static int    dev_size_dc[ 4 ]  = { 0 };
+static int    dev_size_ach[ 4 ] = { 0 };
+static int    dev_size_acl[ 4 ] = { 0 };
+static int    dev_size_zdh[ 4 ] = { 0 };
+static int    dev_size_zdl[ 4 ] = { 0 };
 #endif
 
 
@@ -645,9 +641,9 @@ INTERN int    dev_size_zdl[ 4 ] = { 0 };
 	global variables: messages
 	----------------------------------------------- */
 
-INTERN char errormessage [ MSG_SIZE ];
-INTERN bool (*errorfunction)();
-INTERN int  errorlevel;
+static char errormessage [ MSG_SIZE ];
+static bool (*errorfunction)();
+static int  errorlevel;
 // meaning of errorlevel:
 // -1 -> wrong input
 // 0 -> no error
@@ -660,30 +656,30 @@ INTERN int  errorlevel;
 	----------------------------------------------- */
 
 #if !defined( BUILD_LIB )
-INTERN int  verbosity  = -1;	// level of verbosity
-INTERN bool overwrite  = false;	// overwrite files yes / no
-INTERN bool wait_exit  = true;	// pause after finished yes / no
-INTERN int  verify_lv  = 0;		// verification level ( none (0), simple (1), detailed output (2) )
-INTERN int  err_tol    = 1;		// error threshold ( proceed on warnings yes (2) / no (1) )
-INTERN bool disc_meta  = false;	// discard meta-info yes / no
+static int  verbosity  = -1;	// level of verbosity
+static bool overwrite  = false;	// overwrite files yes / no
+static bool wait_exit  = true;	// pause after finished yes / no
+static int  verify_lv  = 0;		// verification level ( none (0), simple (1), detailed output (2) )
+static int  err_tol    = 1;		// error threshold ( proceed on warnings yes (2) / no (1) )
+static bool disc_meta  = false;	// discard meta-info yes / no
 
-INTERN bool developer  = false;	// allow developers functions yes/no
-INTERN bool auto_set   = true;	// automatic find best settings yes/no
-INTERN int  action = A_COMPRESS;// what to do with JPEG/PJG files
+static bool developer  = false;	// allow developers functions yes/no
+static bool auto_set   = true;	// automatic find best settings yes/no
+static int  action = A_COMPRESS;// what to do with JPEG/PJG files
 
-INTERN FILE*  msgout   = stdout;// stream for output of messages
-INTERN bool   pipe_on  = false;	// use stdin/stdout instead of filelist
+static FILE*  msgout   = stdout;// stream for output of messages
+static bool   pipe_on  = false;	// use stdin/stdout instead of filelist
 #else
-INTERN int  err_tol    = 1;		// error threshold ( proceed on warnings yes (2) / no (1) )
-INTERN bool disc_meta  = false;	// discard meta-info yes / no
-INTERN bool auto_set   = true;	// automatic find best settings yes/no
-INTERN int  action = A_COMPRESS;// what to do with JPEG/PJG files
+static int  err_tol    = 1;		// error threshold ( proceed on warnings yes (2) / no (1) )
+static bool disc_meta  = false;	// discard meta-info yes / no
+static bool auto_set   = true;	// automatic find best settings yes/no
+static int  action = A_COMPRESS;// what to do with JPEG/PJG files
 #endif
 
-INTERN unsigned char nois_trs[ 4 ] = {6,6,6,6}; // bit pattern noise threshold
-INTERN unsigned char segm_cnt[ 4 ] = {10,10,10,10}; // number of segments
+static unsigned char nois_trs[ 4 ] = {6,6,6,6}; // bit pattern noise threshold
+static unsigned char segm_cnt[ 4 ] = {10,10,10,10}; // number of segments
 #if !defined( BUILD_LIB )
-INTERN unsigned char orig_set[ 8 ] = { 0 }; // store array for settings
+static unsigned char orig_set[ 8 ] = { 0 }; // store array for settings
 #endif
 
 
@@ -691,20 +687,20 @@ INTERN unsigned char orig_set[ 8 ] = { 0 }; // store array for settings
 	global variables: info about program
 	----------------------------------------------- */
 
-INTERN const unsigned char appversion = 25;
-INTERN const char*  subversion   = "k";
-INTERN const char*  apptitle     = "packJPG";
-INTERN const char*  appname      = "packjpg";
-INTERN const char*  versiondate  = "01/22/2016";
-INTERN const char*  author       = "Matthias Stirner / Se";
+static const unsigned char appversion = 25;
+static const char*  subversion   = "k";
+static const char*  apptitle     = "packJPG";
+static const char*  appname      = "packjpg";
+static const char*  versiondate  = "01/22/2016";
+static const char*  author       = "Matthias Stirner / Se";
 #if !defined(BUILD_LIB)
-INTERN const char*  website      = "http://packjpg.encode.ru/";
-INTERN const char*	copyright    = "2006-2016 HTW Aalen University & Matthias Stirner";
-INTERN const char*  email        = "packjpg (at) matthiasstirner.com";
-INTERN const char*  pjg_ext      = "pjg";
-INTERN const char*  jpg_ext      = "jpg";
+static const char*  website      = "http://packjpg.encode.ru/";
+static const char*	copyright    = "2006-2016 HTW Aalen University & Matthias Stirner";
+static const char*  email        = "packjpg (at) matthiasstirner.com";
+static const char*  pjg_ext      = "pjg";
+static const char*  jpg_ext      = "jpg";
 #endif
-INTERN const char   pjg_magic[] = { 'J', 'S' };
+static const char   pjg_magic[] = { 'J', 'S' };
 
 
 /* -----------------------------------------------
@@ -769,7 +765,7 @@ int main( int argc, char** argv )
 		if ( errorlevel > 0 ) {
 			err_list[ file_no ] = (char*) calloc( MSG_SIZE, sizeof( char ) );
 			err_tp[ file_no ] = errorlevel;
-			if ( err_list[ file_no ] != NULL )
+			if ( err_list[ file_no ] != nullptr )
 				strcpy( err_list[ file_no ], errormessage );
 		}
 		// count errors / warnings / file sizes
@@ -870,7 +866,7 @@ int main( int argc, char** argv )
 EXPORT bool pjglib_convert_stream2stream( char* msg )
 {
 	// process in main function
-	return pjglib_convert_stream2mem( NULL, NULL, msg ); 
+	return pjglib_convert_stream2mem( nullptr, nullptr, msg ); 
 }
 #endif
 
@@ -886,7 +882,7 @@ EXPORT bool pjglib_convert_file2file( char* in, char* out, char* msg )
 	pjglib_init_streams( (void*) in, 0, 0, (void*) out, 0 );
 	
 	// process in main function
-	return pjglib_convert_stream2mem( NULL, NULL, msg ); 
+	return pjglib_convert_stream2mem( nullptr, nullptr, msg ); 
 }
 #endif
 
@@ -918,14 +914,14 @@ EXPORT bool pjglib_convert_stream2mem( unsigned char** out_file, unsigned int* o
 	
 	// fetch pointer and size of output (only for memory output)
 	if ( ( errorlevel < err_tol ) && ( lib_out_type == 1 ) &&
-		 ( out_file != NULL ) && ( out_size != NULL ) ) {
+		 ( out_file != nullptr ) && ( out_size != nullptr ) ) {
 		*out_size = str_out->getsize();
 		*out_file = str_out->getptr();
 	}
 	
 	// close iostreams
-	if ( str_in  != NULL ) delete( str_in  ); str_in  = NULL;
-	if ( str_out != NULL ) delete( str_out ); str_out = NULL;
+	if ( str_in  != nullptr ) delete( str_in  ); str_in  = nullptr;
+	if ( str_out != nullptr ) delete( str_out ); str_out = nullptr;
 	
 	end = clock();
 	
@@ -938,7 +934,7 @@ EXPORT bool pjglib_convert_stream2mem( unsigned char** out_file, unsigned int* o
 				if ( file_exists( jpgfilename ) ) remove( jpgfilename );
 			}
 		}
-		if ( msg != NULL ) strcpy( msg, errormessage );
+		if ( msg != nullptr ) strcpy( msg, errormessage );
 		return false;
 	}
 	
@@ -947,7 +943,7 @@ EXPORT bool pjglib_convert_stream2mem( unsigned char** out_file, unsigned int* o
 	cr    = ( jpgfilesize > 0 ) ? ( 100.0 * pjgfilesize / jpgfilesize ) : 0;
 	
 	// write success message else
-	if ( msg != NULL ) {
+	if ( msg != nullptr ) {
 		switch( filetype )
 		{
 			case F_JPG:
@@ -1002,7 +998,7 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
 	unsigned char buffer[ 2 ];
 	
 	// (re)set errorlevel
-	errorfunction = NULL;
+	errorfunction = nullptr;
 	errorlevel = 0;
 	jpgfilesize = 0;
 	pjgfilesize = 0;
@@ -1024,8 +1020,8 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
 	}
 	
 	// free memory from filenames if needed
-	if ( jpgfilename != NULL ) free( jpgfilename ); jpgfilename = NULL;
-	if ( pjgfilename != NULL ) free( pjgfilename ); pjgfilename = NULL;
+	if ( jpgfilename != nullptr ) free( jpgfilename ); jpgfilename = nullptr;
+	if ( pjgfilename != nullptr ) free( pjgfilename ); pjgfilename = nullptr;
 	
 	// check input stream
 	str_in->read( buffer, 1, 2 );
@@ -1107,17 +1103,17 @@ EXPORT const char* pjglib_short_name( void )
 	----------------------------------------------- */
 	
 #if !defined(BUILD_LIB)	
-INTERN void initialize_options( int argc, char** argv )
+static void initialize_options( int argc, char** argv )
 {	
 	int tmp_val;
 	char** tmp_flp;
 	int i;
 	
 	
-	// get memory for filelist & preset with NULL
+	// get memory for filelist & preset with nullptr
 	filelist = (char**) calloc( argc, sizeof( char* ) );
 	for ( i = 0; i < argc; i++ )
-		filelist[ i ] = NULL;
+		filelist[ i ] = nullptr;
 	
 	// preset temporary filelist pointer
 	tmp_flp = filelist;
@@ -1235,7 +1231,7 @@ INTERN void initialize_options( int argc, char** argv )
 	}
 	
 	// count number of files (or filenames) in filelist
-	for ( file_cnt = 0; filelist[ file_cnt ] != NULL; file_cnt++ );
+	for ( file_cnt = 0; filelist[ file_cnt ] != nullptr; file_cnt++ );
 	
 	// alloc arrays for error messages and types storage
 	err_list = (char**) calloc( file_cnt, sizeof( char* ) );
@@ -1265,16 +1261,16 @@ INTERN void initialize_options( int argc, char** argv )
 	----------------------------------------------- */
 	
 #if !defined(BUILD_LIB)
-INTERN void process_ui( void )
+static void process_ui( void )
 {
 	clock_t begin, end;
-	const char* actionmsg  = NULL;
-	const char* errtypemsg = NULL;
+	const char* actionmsg  = nullptr;
+	const char* errtypemsg = nullptr;
 	int total, bpms;
 	float cr;	
 	
 	
-	errorfunction = NULL;
+	errorfunction = nullptr;
 	errorlevel = 0;
 	jpgfilesize = 0;
 	pjgfilesize = 0;	
@@ -1333,9 +1329,9 @@ INTERN void process_ui( void )
 	process_file();
 	
 	// close iostreams
-	if ( str_in  != NULL ) delete( str_in  ); str_in  = NULL;
-	if ( str_out != NULL ) delete( str_out ); str_out = NULL;
-	if ( str_str != NULL ) delete( str_str ); str_str = NULL;
+	if ( str_in  != nullptr ) delete( str_in  ); str_in  = nullptr;
+	if ( str_out != nullptr ) delete( str_out ); str_out = nullptr;
+	if ( str_str != nullptr ) delete( str_str ); str_str = nullptr;
 	// delete if broken or if output not needed
 	if ( ( !pipe_on ) && ( ( errorlevel >= err_tol ) || ( action != A_COMPRESS ) ) ) {
 		if ( filetype == F_JPG ) {
@@ -1422,9 +1418,9 @@ INTERN void process_ui( void )
 	----------------------------------------------- */
 	
 #if !defined(BUILD_LIB)
-INTERN inline const char* get_status( bool (*function)() )
+static inline const char* get_status( bool (*function)() )
 {	
-	if ( function == NULL ) {
+	if ( function == nullptr ) {
 		return "unknown action";
 	} else if ( function == *check_file ) {
 		return "Determining filetype";
@@ -1488,7 +1484,7 @@ INTERN inline const char* get_status( bool (*function)() )
 	----------------------------------------------- */
 	
 #if !defined(BUILD_LIB)
-INTERN void show_help( void )
+static void show_help( void )
 {	
 	fprintf( msgout, "\n" );
 	fprintf( msgout, "Website: %s\n", website );
@@ -1533,7 +1529,7 @@ INTERN void show_help( void )
 	processes one file
 	----------------------------------------------- */
 
-INTERN void process_file( void )
+static void process_file( void )
 {	
 	if ( filetype == F_JPG ) {
 		switch ( action ) {
@@ -1705,7 +1701,7 @@ INTERN void process_file( void )
 	main-function execution routine
 	----------------------------------------------- */
 
-INTERN void execute( bool (*function)() )
+static void execute( bool (*function)() )
 {
 	if ( errorlevel < err_tol ) {
 		#if !defined BUILD_LIB
@@ -1727,7 +1723,7 @@ INTERN void execute( bool (*function)() )
 		// set endtime
 		end = clock();
 		
-		if ( ( errorlevel > 0 ) && ( errorfunction == NULL ) )
+		if ( ( errorlevel > 0 ) && ( errorfunction == nullptr ) )
 			errorfunction = function;
 		
 		// write time or failure notice
@@ -1744,7 +1740,7 @@ INTERN void execute( bool (*function)() )
 		( *function )();
 		
 		// store errorfunction if needed
-		if ( ( errorlevel > 0 ) && ( errorfunction == NULL ) )
+		if ( ( errorlevel > 0 ) && ( errorfunction == nullptr ) )
 			errorfunction = function;
 		#endif
 	}
@@ -1760,7 +1756,7 @@ INTERN void execute( bool (*function)() )
 	----------------------------------------------- */
 
 #if !defined(BUILD_LIB)
-INTERN bool check_file( void )
+static bool check_file( void )
 {	
 	unsigned char fileid[ 2 ] = { 0, 0 };
 	const char* filename = filelist[ file_no ];
@@ -1775,8 +1771,8 @@ INTERN bool check_file( void )
 	}
 	
 	// free memory from filenames if needed
-	if ( jpgfilename != NULL ) free( jpgfilename ); jpgfilename = NULL;
-	if ( pjgfilename != NULL ) free( pjgfilename ); pjgfilename = NULL;
+	if ( jpgfilename != nullptr ) free( jpgfilename ); jpgfilename = nullptr;
+	if ( pjgfilename != nullptr ) free( pjgfilename ); pjgfilename = nullptr;
 	
 	// immediately return error if 2 bytes can't be read
 	if ( str_in->read( fileid, 1, 2 ) != 2 ) { 
@@ -1799,8 +1795,8 @@ INTERN bool check_file( void )
 				unique_filename( filename, (char*) pjg_ext );
 		}
 		else {
-			jpgfilename = create_filename( "STDIN", NULL );
-			pjgfilename = create_filename( "STDOUT", NULL );
+			jpgfilename = create_filename( "STDIN", nullptr );
+			pjgfilename = create_filename( "STDOUT", nullptr );
 		}
 		// open output stream, check for errors
 		str_out = new iostream( (void*) pjgfilename, ( !pipe_on ) ? StreamType::kFile : StreamType::kStream, 0, StreamMode::kWrite );
@@ -1836,8 +1832,8 @@ INTERN bool check_file( void )
 				unique_filename( filename, (char*) jpg_ext );
 		}
 		else {
-			jpgfilename = create_filename( "STDOUT", NULL );
-			pjgfilename = create_filename( "STDIN", NULL );
+			jpgfilename = create_filename( "STDOUT", nullptr );
+			pjgfilename = create_filename( "STDIN", nullptr );
 		}
 		// open output stream, check for errors
 		str_out = new iostream( (void*) jpgfilename, ( !pipe_on ) ? StreamType::kFile : StreamType::kStream, 0, StreamMode::kWrite );
@@ -1868,7 +1864,7 @@ INTERN bool check_file( void )
 	----------------------------------------------- */
 	
 #if !defined(BUILD_LIB)
-INTERN bool swap_streams( void )	
+static bool swap_streams( void )	
 {
 	char dmp[ 2 ];
 	
@@ -1900,7 +1896,7 @@ INTERN bool swap_streams( void )
 	----------------------------------------------- */
 
 #if !defined(BUILD_LIB)
-INTERN bool compare_output( void )
+static bool compare_output( void )
 {
 	unsigned char* buff_ori;
 	unsigned char* buff_cmp;
@@ -1912,9 +1908,9 @@ INTERN bool compare_output( void )
 	// init buffer arrays
 	buff_ori = ( unsigned char* ) calloc( bsize, sizeof( char ) );
 	buff_cmp = ( unsigned char* ) calloc( bsize, sizeof( char ) );
-	if ( ( buff_ori == NULL ) || ( buff_cmp == NULL ) ) {
-		if ( buff_ori != NULL ) free( buff_ori );
-		if ( buff_cmp != NULL ) free( buff_cmp );
+	if ( ( buff_ori == nullptr ) || ( buff_cmp == nullptr ) ) {
+		if ( buff_ori != nullptr ) free( buff_ori );
+		if ( buff_cmp != nullptr ) free( buff_cmp );
 		sprintf( errormessage, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
@@ -1970,7 +1966,7 @@ INTERN bool compare_output( void )
 	set each variable to its initial value
 	----------------------------------------------- */
 
-INTERN bool reset_buffers( void )
+static bool reset_buffers( void )
 {
 	int cmp, bpos;
 	int i;
@@ -1978,37 +1974,37 @@ INTERN bool reset_buffers( void )
 	
 	// -- free buffers --
 	
-	// free buffers & set pointers NULL
-	if ( hdrdata  != NULL ) free ( hdrdata );
-	if ( huffdata != NULL ) free ( huffdata );
-	if ( grbgdata != NULL ) free ( grbgdata );
-	if ( rst_err  != NULL ) free ( rst_err );
-	if ( rstp     != NULL ) free ( rstp );
-	if ( scnp     != NULL ) free ( scnp );
-	hdrdata   = NULL;
-	huffdata  = NULL;
-	grbgdata  = NULL;
-	rst_err   = NULL;
-	rstp      = NULL;
-	scnp      = NULL;
+	// free buffers & set pointers nullptr
+	if ( hdrdata  != nullptr ) free ( hdrdata );
+	if ( huffdata != nullptr ) free ( huffdata );
+	if ( grbgdata != nullptr ) free ( grbgdata );
+	if ( rst_err  != nullptr ) free ( rst_err );
+	if ( rstp     != nullptr ) free ( rstp );
+	if ( scnp     != nullptr ) free ( scnp );
+	hdrdata   = nullptr;
+	huffdata  = nullptr;
+	grbgdata  = nullptr;
+	rst_err   = nullptr;
+	rstp      = nullptr;
+	scnp      = nullptr;
 	
 	// free image arrays
 	for ( cmp = 0; cmp < 4; cmp++ )	{
-		if ( zdstdata[ cmp ] != NULL ) free( zdstdata[cmp] );
-		if ( eobxhigh[ cmp ] != NULL ) free( eobxhigh[cmp] );
-		if ( eobyhigh[ cmp ] != NULL ) free( eobyhigh[cmp] );
-		if ( zdstxlow[ cmp ] != NULL ) free( zdstxlow[cmp] );
-		if ( zdstylow[ cmp ] != NULL ) free( zdstylow[cmp] );
-		zdstdata[ cmp ] = NULL;
-		eobxhigh[ cmp ] = NULL;
-		eobyhigh[ cmp ] = NULL;
-		zdstxlow[ cmp ] = NULL;
-		zdstylow[ cmp ] = NULL;
+		if ( zdstdata[ cmp ] != nullptr ) free( zdstdata[cmp] );
+		if ( eobxhigh[ cmp ] != nullptr ) free( eobxhigh[cmp] );
+		if ( eobyhigh[ cmp ] != nullptr ) free( eobyhigh[cmp] );
+		if ( zdstxlow[ cmp ] != nullptr ) free( zdstxlow[cmp] );
+		if ( zdstylow[ cmp ] != nullptr ) free( zdstylow[cmp] );
+		zdstdata[ cmp ] = nullptr;
+		eobxhigh[ cmp ] = nullptr;
+		eobyhigh[ cmp ] = nullptr;
+		zdstxlow[ cmp ] = nullptr;
+		zdstylow[ cmp ] = nullptr;
 		freqscan[ cmp ] = (unsigned char*) stdscan;
 		
 		for ( bpos = 0; bpos < 64; bpos++ ) {
-			if ( colldata[ cmp ][ bpos ] != NULL ) free( colldata[cmp][bpos] );
-			colldata[ cmp ][ bpos ] = NULL;
+			if ( colldata[ cmp ][ bpos ] != nullptr ) free( colldata[cmp][bpos] );
+			colldata[ cmp ][ bpos ] = nullptr;
 		}		
 	}
 	
@@ -2028,7 +2024,7 @@ INTERN bool reset_buffers( void )
 		cmpnfo[ cmp ].nc  = -1;
 		cmpnfo[ cmp ].sid = -1;
 		cmpnfo[ cmp ].jid = -1;
-		cmpnfo[ cmp ].qtable = NULL;
+		cmpnfo[ cmp ].qtable = nullptr;
 		cmpnfo[ cmp ].huffdc = -1;
 		cmpnfo[ cmp ].huffac = -1;
 	}
@@ -2069,9 +2065,9 @@ INTERN bool reset_buffers( void )
 	Read in header & image data
 	----------------------------------------------- */
 	
-INTERN bool read_jpeg( void )
+static bool read_jpeg( void )
 {
-	unsigned char* segment = NULL; // storage for current segment
+	unsigned char* segment = nullptr; // storage for current segment
 	unsigned int   ssize = 1024; // current size of segment array
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
@@ -2097,7 +2093,7 @@ INTERN bool read_jpeg( void )
 	
 	// alloc memory for segment data first
 	segment = ( unsigned char* ) calloc( ssize, sizeof( char ) );
-	if ( segment == NULL ) {
+	if ( segment == nullptr ) {
 		sprintf( errormessage, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
@@ -2141,19 +2137,19 @@ INTERN bool read_jpeg( void )
 					else { // in all other cases leave it to the header parser routines
 						// store number of wrongly set rst markers
 						if ( crst > 0 ) {
-							if ( rst_err == NULL ) {
+							if ( rst_err == nullptr ) {
 								rst_err = (unsigned char*) calloc( scnc + 1, sizeof( char ) );
-								if ( rst_err == NULL ) {
+								if ( rst_err == nullptr ) {
 									sprintf( errormessage, MEM_ERRMSG );
 									errorlevel = 2;
 									return false;
 								}
 							}
 						}
-						if ( rst_err != NULL ) {
+						if ( rst_err != nullptr ) {
 							// realloc and set only if needed
 							rst_err = ( unsigned char* ) frealloc( rst_err, ( scnc + 1 ) * sizeof( char ) );
-							if ( rst_err == NULL ) {
+							if ( rst_err == nullptr ) {
 								sprintf( errormessage, MEM_ERRMSG );
 								errorlevel = 2;
 								return false;
@@ -2222,7 +2218,7 @@ INTERN bool read_jpeg( void )
 		// realloc segment data if needed
 		if ( ssize < len ) {
 			segment = ( unsigned char* ) frealloc( segment, len );
-			if ( segment == NULL ) {
+			if ( segment == nullptr ) {
 				sprintf( errormessage, MEM_ERRMSG );
 				errorlevel = 2;
 				delete ( hdrw );
@@ -2285,7 +2281,7 @@ INTERN bool read_jpeg( void )
 	Merges header & image data to jpeg
 	----------------------------------------------- */
 	
-INTERN bool merge_jpeg( void )
+static bool merge_jpeg( void )
 {
 	unsigned char SOI[ 2 ] = { 0xFF, 0xD8 }; // SOI segment
 	unsigned char EOI[ 2 ] = { 0xFF, 0xD9 }; // EOI segment
@@ -2338,7 +2334,7 @@ INTERN bool merge_jpeg( void )
 			if ( huffdata[ ipos ] == 0xFF )
 				str_out->write( &stv, 1, 1 );
 			// insert restart markers if needed
-			if ( rstp != NULL ) {
+			if ( rstp != nullptr ) {
 				if ( ipos == rstp[ rpos ] ) {
 					rst = 0xD0 + ( cpos % 8 );
 					str_out->write( &mrk, 1, 1 );
@@ -2348,7 +2344,7 @@ INTERN bool merge_jpeg( void )
 			}
 		}
 		// insert false rst markers at end if needed
-		if ( rst_err != NULL ) {
+		if ( rst_err != nullptr ) {
 			while ( rst_err[ scan - 1 ] > 0 ) {
 				rst = 0xD0 + ( cpos % 8 );
 				str_out->write( &mrk, 1, 1 );
@@ -2387,7 +2383,7 @@ INTERN bool merge_jpeg( void )
 	JPEG decoding routine
 	----------------------------------------------- */
 
-INTERN bool decode_jpeg( void )
+static bool decode_jpeg( void )
 {
 	abitreader* huffr; // bitwise reader for image data
 	
@@ -2743,7 +2739,7 @@ INTERN bool decode_jpeg( void )
 	JPEG encoding routine
 	----------------------------------------------- */
 
-INTERN bool recode_jpeg( void )
+static bool recode_jpeg( void )
 {
 	abitwriter*  huffw; // bitwise writer for image data
 	abytewriter* storw; // bytewise writer for storage of correction bits
@@ -2799,9 +2795,9 @@ INTERN bool recode_jpeg( void )
 		
 		
 		// (re)alloc scan positons array
-		if ( scnp == NULL ) scnp = ( unsigned int* ) calloc( scnc + 2, sizeof( int ) );
+		if ( scnp == nullptr ) scnp = ( unsigned int* ) calloc( scnc + 2, sizeof( int ) );
 		else scnp = ( unsigned int* ) frealloc( scnp, ( scnc + 2 ) * sizeof( int ) );
-		if ( scnp == NULL ) {
+		if ( scnp == nullptr ) {
 			sprintf( errormessage, MEM_ERRMSG );
 			errorlevel = 2;
 			return false;
@@ -2811,9 +2807,9 @@ INTERN bool recode_jpeg( void )
 		if ( rsti > 0 ) {
 			tmp = rstc + ( ( cs_cmpc > 1 ) ?
 				( mcuc / rsti ) : ( cmpnfo[ cs_cmp[ 0 ] ].bc / rsti ) );
-			if ( rstp == NULL ) rstp = ( unsigned int* ) calloc( tmp + 1, sizeof( int ) );
+			if ( rstp == nullptr ) rstp = ( unsigned int* ) calloc( tmp + 1, sizeof( int ) );
 			else rstp = ( unsigned int* ) frealloc( rstp, ( tmp + 1 ) * sizeof( int ) );
-			if ( rstp == NULL ) {
+			if ( rstp == nullptr ) {
 				sprintf( errormessage, MEM_ERRMSG );
 				errorlevel = 2;
 				return false;
@@ -3063,7 +3059,7 @@ INTERN bool recode_jpeg( void )
 	
 	// store last scan & restart positions
 	scnp[ scnc ] = hufs;
-	if ( rstp != NULL )
+	if ( rstp != nullptr )
 		rstp[ rstc ] = hufs;
 	
 	
@@ -3075,7 +3071,7 @@ INTERN bool recode_jpeg( void )
 	adapt ICOS tables for quantizer tables
 	----------------------------------------------- */
 	
-INTERN bool adapt_icos( void )
+static bool adapt_icos( void )
 {
 	unsigned short quant[ 64 ]; // local copy of quantization
 	int ipos;
@@ -3109,7 +3105,7 @@ INTERN bool adapt_icos( void )
 	filter DC coefficients
 	----------------------------------------------- */
 
-INTERN bool predict_dc( void )
+static bool predict_dc( void )
 {
 	signed short* coef;
 	int absmaxp;
@@ -3146,7 +3142,7 @@ INTERN bool predict_dc( void )
 	unpredict DC coefficients
 	----------------------------------------------- */
 
-INTERN bool unpredict_dc( void )
+static bool unpredict_dc( void )
 {	
 	signed short* coef;
 	int absmaxp;
@@ -3184,7 +3180,7 @@ INTERN bool unpredict_dc( void )
 	checks range of values, error if out of bounds
 	----------------------------------------------- */
 
-INTERN bool check_value_range( void )
+static bool check_value_range( void )
 {
 	int absmax;
 	int cmp, bpos, dpos;
@@ -3212,7 +3208,7 @@ INTERN bool check_value_range( void )
 	calculate zero distribution lists
 	----------------------------------------------- */
 	
-INTERN bool calc_zdst_lists( void )
+static bool calc_zdst_lists( void )
 {
 	int cmp, bpos, dpos;
 	int b_x, b_y;
@@ -3252,7 +3248,7 @@ INTERN bool calc_zdst_lists( void )
 	packs all parts to compressed pjg
 	----------------------------------------------- */
 	
-INTERN bool pack_pjg( void )
+static bool pack_pjg( void )
 {
 	aricoder* encoder;
 	unsigned char hcode;
@@ -3300,9 +3296,9 @@ INTERN bool pack_pjg( void )
 	// store padbit (padbit can't be retrieved from the header)
 	if ( !pjg_encode_bit( encoder, padbit ) ) return false;	
 	// also encode one bit to signal false/correct use of RST markers
-	if ( !pjg_encode_bit( encoder, ( rst_err == NULL ) ? 0 : 1 ) ) return false;
+	if ( !pjg_encode_bit( encoder, ( rst_err == nullptr ) ? 0 : 1 ) ) return false;
 	// encode # of false set RST markers per scan
-	if ( rst_err != NULL )
+	if ( rst_err != nullptr )
 		if ( !pjg_encode_generic( encoder, rst_err, scnc ) ) return false;
 	
 	// encode actual components data
@@ -3380,7 +3376,7 @@ INTERN bool pack_pjg( void )
 	unpacks compressed pjg to colldata
 	----------------------------------------------- */
 	
-INTERN bool unpack_pjg( void )
+static bool unpack_pjg( void )
 {
 	aricoder* decoder;
 	unsigned char hcode;
@@ -3426,7 +3422,7 @@ INTERN bool unpack_pjg( void )
 	if ( !pjg_decode_bit( decoder, &cb ) ) return false;
 	// decode # of false set RST markers per scan only if available
 	if ( cb == 1 )
-		if ( !pjg_decode_generic( decoder, &rst_err, NULL ) ) return false;
+		if ( !pjg_decode_generic( decoder, &rst_err, nullptr ) ) return false;
 	
 	// undo header optimizations
 	if ( !pjg_unoptimize_header() )	return false;	
@@ -3478,7 +3474,7 @@ INTERN bool unpack_pjg( void )
 /* -----------------------------------------------
 	Parses header for imageinfo
 	----------------------------------------------- */
-INTERN bool jpg_setup_imginfo( void )
+static bool jpg_setup_imginfo( void )
 {
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
@@ -3508,7 +3504,7 @@ INTERN bool jpg_setup_imginfo( void )
 	for ( cmp = 0; cmp < cmpc; cmp++ ) {
 		if ( ( cmpnfo[cmp].sfv == 0 ) ||
 			 ( cmpnfo[cmp].sfh == 0 ) ||
-			 ( cmpnfo[cmp].qtable == NULL ) ||
+			 ( cmpnfo[cmp].qtable == nullptr ) ||
 			 ( cmpnfo[cmp].qtable[0] == 0 ) ||
 			 ( jpegtype == 0 ) ) {
 			sprintf( errormessage, "header information is incomplete" );
@@ -3551,7 +3547,7 @@ INTERN bool jpg_setup_imginfo( void )
 		// alloc memory for colls
 		for ( bpos = 0; bpos < 64; bpos++ ) {
 			colldata[cmp][bpos] = (short int*) calloc ( cmpnfo[cmp].bc, sizeof( short ) );
-			if (colldata[cmp][bpos] == NULL) {
+			if (colldata[cmp][bpos] == nullptr) {
 				sprintf( errormessage, MEM_ERRMSG );
 				errorlevel = 2;
 				return false;
@@ -3564,9 +3560,9 @@ INTERN bool jpg_setup_imginfo( void )
 		eobyhigh[cmp] = (unsigned char*) calloc( cmpnfo[cmp].bc, sizeof( char ) );
 		zdstxlow[cmp] = (unsigned char*) calloc( cmpnfo[cmp].bc, sizeof( char ) );
 		zdstylow[cmp] = (unsigned char*) calloc( cmpnfo[cmp].bc, sizeof( char ) );
-		if ( ( zdstdata[cmp] == NULL ) ||
-			( eobxhigh[cmp] == NULL ) || ( eobyhigh[cmp] == NULL ) ||
-			( zdstxlow[cmp] == NULL ) || ( zdstylow[cmp] == NULL ) ) {
+		if ( ( zdstdata[cmp] == nullptr ) ||
+			( eobxhigh[cmp] == nullptr ) || ( eobyhigh[cmp] == nullptr ) ||
+			( zdstxlow[cmp] == nullptr ) || ( zdstylow[cmp] == nullptr ) ) {
 			sprintf( errormessage, MEM_ERRMSG );
 			errorlevel = 2;
 			return false;
@@ -3592,7 +3588,7 @@ INTERN bool jpg_setup_imginfo( void )
 /* -----------------------------------------------
 	Parse routines for JFIF segments
 	----------------------------------------------- */
-INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char* segment )
+static bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char* segment )
 {
 	unsigned int hpos = 4; // current position in segment, start after segment header
 	int lval, rval; // temporary variables
@@ -3881,7 +3877,7 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 /* -----------------------------------------------
 	JFIF header rebuilding routine
 	----------------------------------------------- */
-INTERN bool jpg_rebuild_header( void )
+static bool jpg_rebuild_header( void )
 {	
 	abytewriter* hdrw; // new header writer
 	
@@ -3920,7 +3916,7 @@ INTERN bool jpg_rebuild_header( void )
 /* -----------------------------------------------
 	sequential block decoding routine
 	----------------------------------------------- */
-INTERN int jpg_decode_block_seq( abitreader* huffr, huffTree* dctree, huffTree* actree, short* block )
+static int jpg_decode_block_seq( abitreader* huffr, huffTree* dctree, huffTree* actree, short* block )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -3975,7 +3971,7 @@ INTERN int jpg_decode_block_seq( abitreader* huffr, huffTree* dctree, huffTree* 
 /* -----------------------------------------------
 	sequential block encoding routine
 	----------------------------------------------- */
-INTERN int jpg_encode_block_seq( abitwriter* huffw, huffCodes* dctbl, huffCodes* actbl, short* block )
+static int jpg_encode_block_seq( abitwriter* huffw, huffCodes* dctbl, huffCodes* actbl, short* block )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4027,7 +4023,7 @@ INTERN int jpg_encode_block_seq( abitwriter* huffw, huffCodes* dctbl, huffCodes*
 /* -----------------------------------------------
 	progressive DC decoding routine
 	----------------------------------------------- */
-INTERN int jpg_decode_dc_prg_fs( abitreader* huffr, huffTree* dctree, short* block )
+static int jpg_decode_dc_prg_fs( abitreader* huffr, huffTree* dctree, short* block )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4050,7 +4046,7 @@ INTERN int jpg_decode_dc_prg_fs( abitreader* huffr, huffTree* dctree, short* blo
 /* -----------------------------------------------
 	progressive DC encoding routine
 	----------------------------------------------- */
-INTERN int jpg_encode_dc_prg_fs( abitwriter* huffw, huffCodes* dctbl, short* block )
+static int jpg_encode_dc_prg_fs( abitwriter* huffw, huffCodes* dctbl, short* block )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4071,7 +4067,7 @@ INTERN int jpg_encode_dc_prg_fs( abitwriter* huffw, huffCodes* dctbl, short* blo
 /* -----------------------------------------------
 	progressive AC decoding routine
 	----------------------------------------------- */
-INTERN int jpg_decode_ac_prg_fs( abitreader* huffr, huffTree* actree, short* block, int* eobrun, int from, int to )
+static int jpg_decode_ac_prg_fs( abitreader* huffr, huffTree* actree, short* block, int* eobrun, int from, int to )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4124,7 +4120,7 @@ INTERN int jpg_decode_ac_prg_fs( abitreader* huffr, huffTree* actree, short* blo
 /* -----------------------------------------------
 	progressive AC encoding routine
 	----------------------------------------------- */
-INTERN int jpg_encode_ac_prg_fs( abitwriter* huffw, huffCodes* actbl, short* block, int* eobrun, int from, int to )
+static int jpg_encode_ac_prg_fs( abitwriter* huffw, huffCodes* actbl, short* block, int* eobrun, int from, int to )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4177,7 +4173,7 @@ INTERN int jpg_encode_ac_prg_fs( abitwriter* huffw, huffCodes* actbl, short* blo
 /* -----------------------------------------------
 	progressive DC SA decoding routine
 	----------------------------------------------- */
-INTERN int jpg_decode_dc_prg_sa( abitreader* huffr, short* block )
+static int jpg_decode_dc_prg_sa( abitreader* huffr, short* block )
 {
 	// decode next bit of dc coefficient
 	block[ 0 ] = huffr->read( 1 );
@@ -4190,7 +4186,7 @@ INTERN int jpg_decode_dc_prg_sa( abitreader* huffr, short* block )
 /* -----------------------------------------------
 	progressive DC SA encoding routine
 	----------------------------------------------- */
-INTERN int jpg_encode_dc_prg_sa( abitwriter* huffw, short* block )
+static int jpg_encode_dc_prg_sa( abitwriter* huffw, short* block )
 {
 	// enocode next bit of dc coefficient
 	huffw->write( block[ 0 ], 1 );
@@ -4203,7 +4199,7 @@ INTERN int jpg_encode_dc_prg_sa( abitwriter* huffw, short* block )
 /* -----------------------------------------------
 	progressive AC SA decoding routine
 	----------------------------------------------- */
-INTERN int jpg_decode_ac_prg_sa( abitreader* huffr, huffTree* actree, short* block, int* eobrun, int from, int to )
+static int jpg_decode_ac_prg_sa( abitreader* huffr, huffTree* actree, short* block, int* eobrun, int from, int to )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4277,7 +4273,7 @@ INTERN int jpg_decode_ac_prg_sa( abitreader* huffr, huffTree* actree, short* blo
 /* -----------------------------------------------
 	progressive AC SA encoding routine
 	----------------------------------------------- */
-INTERN int jpg_encode_ac_prg_sa( abitwriter* huffw, abytewriter* storw, huffCodes* actbl, short* block, int* eobrun, int from, int to )
+static int jpg_encode_ac_prg_sa( abitwriter* huffw, abytewriter* storw, huffCodes* actbl, short* block, int* eobrun, int from, int to )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4360,7 +4356,7 @@ INTERN int jpg_encode_ac_prg_sa( abitwriter* huffw, abytewriter* storw, huffCode
 /* -----------------------------------------------
 	run of EOB SA decoding routine
 	----------------------------------------------- */
-INTERN int jpg_decode_eobrun_sa( abitreader* huffr, short* block, int* eobrun, int from, int to )
+static int jpg_decode_eobrun_sa( abitreader* huffr, short* block, int* eobrun, int from, int to )
 {
 	unsigned short n;
 	int bpos;
@@ -4382,7 +4378,7 @@ INTERN int jpg_decode_eobrun_sa( abitreader* huffr, short* block, int* eobrun, i
 /* -----------------------------------------------
 	run of EOB encoding routine
 	----------------------------------------------- */
-INTERN int jpg_encode_eobrun( abitwriter* huffw, huffCodes* actbl, int* eobrun )
+static int jpg_encode_eobrun( abitwriter* huffw, huffCodes* actbl, int* eobrun )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4412,7 +4408,7 @@ INTERN int jpg_encode_eobrun( abitwriter* huffw, huffCodes* actbl, int* eobrun )
 /* -----------------------------------------------
 	correction bits encoding routine
 	----------------------------------------------- */
-INTERN int jpg_encode_crbits( abitwriter* huffw, abytewriter* storw )
+static int jpg_encode_crbits( abitwriter* huffw, abytewriter* storw )
 {	
 	unsigned char* data;
 	int len;
@@ -4439,7 +4435,7 @@ INTERN int jpg_encode_crbits( abitwriter* huffw, abytewriter* storw )
 /* -----------------------------------------------
 	returns next code (from huffman-tree & -data)
 	----------------------------------------------- */
-INTERN int jpg_next_huffcode( abitreader *huffw, huffTree *ctree )
+static int jpg_next_huffcode( abitreader *huffw, huffTree *ctree )
 {	
 	int node = 0;
 	
@@ -4457,7 +4453,7 @@ INTERN int jpg_next_huffcode( abitreader *huffw, huffTree *ctree )
 /* -----------------------------------------------
 	calculates next position for MCU
 	----------------------------------------------- */
-INTERN int jpg_next_mcupos( int* mcu, int* cmp, int* csc, int* sub, int* dpos, int* rstw )
+static int jpg_next_mcupos( int* mcu, int* cmp, int* csc, int* sub, int* dpos, int* rstw )
 {
 	int sta = 0; // status
 	
@@ -4502,7 +4498,7 @@ INTERN int jpg_next_mcupos( int* mcu, int* cmp, int* csc, int* sub, int* dpos, i
 /* -----------------------------------------------
 	calculates next position (non interleaved)
 	----------------------------------------------- */
-INTERN int jpg_next_mcuposn( int* cmp, int* dpos, int* rstw )
+static int jpg_next_mcuposn( int* cmp, int* dpos, int* rstw )
 {
 	// increment position
 	(*dpos)++;
@@ -4532,7 +4528,7 @@ INTERN int jpg_next_mcuposn( int* cmp, int* dpos, int* rstw )
 /* -----------------------------------------------
 	skips the eobrun, calculates next position
 	----------------------------------------------- */
-INTERN int jpg_skip_eobrun( int* cmp, int* dpos, int* rstw, int* eobrun )
+static int jpg_skip_eobrun( int* cmp, int* dpos, int* rstw, int* eobrun )
 {
 	if ( (*eobrun) > 0 ) // error check for eobrun
 	{		
@@ -4577,7 +4573,7 @@ INTERN int jpg_skip_eobrun( int* cmp, int* dpos, int* rstw, int* eobrun )
 /* -----------------------------------------------
 	creates huffman-codes & -trees from dht-data
 	----------------------------------------------- */
-INTERN void jpg_build_huffcodes( unsigned char *clen, unsigned char *cval,	huffCodes *hc, huffTree *ht )
+static void jpg_build_huffcodes( unsigned char *clen, unsigned char *cval,	huffCodes *hc, huffTree *ht )
 {
 	int nextfree;	
 	int code;
@@ -4658,7 +4654,7 @@ INTERN void jpg_build_huffcodes( unsigned char *clen, unsigned char *cval,	huffC
 /* -----------------------------------------------
 	encodes frequency scanorder to pjg
 	----------------------------------------------- */
-INTERN bool pjg_encode_zstscan( aricoder* enc, int cmp )
+static bool pjg_encode_zstscan( aricoder* enc, int cmp )
 {
 	model_s* model;
 	
@@ -4726,7 +4722,7 @@ INTERN bool pjg_encode_zstscan( aricoder* enc, int cmp )
 /* -----------------------------------------------
 	encodes # of non zeroes to pjg (high)
 	----------------------------------------------- */	
-INTERN bool pjg_encode_zdst_high( aricoder* enc, int cmp )
+static bool pjg_encode_zdst_high( aricoder* enc, int cmp )
 {
 	model_s* model;
 	
@@ -4766,7 +4762,7 @@ INTERN bool pjg_encode_zdst_high( aricoder* enc, int cmp )
 /* -----------------------------------------------
 	encodes # of non zeroes to pjg (low)
 	----------------------------------------------- */	
-INTERN bool pjg_encode_zdst_low( aricoder* enc, int cmp )
+static bool pjg_encode_zdst_low( aricoder* enc, int cmp )
 {
 	model_s* model;
 	
@@ -4813,7 +4809,7 @@ INTERN bool pjg_encode_zdst_low( aricoder* enc, int cmp )
 /* -----------------------------------------------
 	encodes DC coefficients to pjg
 	----------------------------------------------- */
-INTERN bool pjg_encode_dc( aricoder* enc, int cmp )
+static bool pjg_encode_dc( aricoder* enc, int cmp )
 {
 	unsigned char* segm_tab;
 	
@@ -4862,7 +4858,7 @@ INTERN bool pjg_encode_dc( aricoder* enc, int cmp )
 	
 	// allocate memory for absolute values storage
 	absv_store = (unsigned short*) calloc ( bc, sizeof( short ) );
-	if ( absv_store == NULL ) {
+	if ( absv_store == nullptr ) {
 		sprintf( errormessage, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
@@ -4933,7 +4929,7 @@ INTERN bool pjg_encode_dc( aricoder* enc, int cmp )
 /* -----------------------------------------------
 	encodes high (7x7) AC coefficients to pjg
 	----------------------------------------------- */
-INTERN bool pjg_encode_ac_high( aricoder* enc, int cmp )
+static bool pjg_encode_ac_high( aricoder* enc, int cmp )
 {
 	unsigned char* segm_tab;
 	
@@ -4989,10 +4985,10 @@ INTERN bool pjg_encode_ac_high( aricoder* enc, int cmp )
 	absv_store = (unsigned short*) calloc ( bc, sizeof( short ) );	
 	sgn_store = (unsigned char*) calloc ( bc, sizeof( char ) );
 	zdstls = (unsigned char*) calloc ( bc, sizeof( char ) );
-	if ( ( absv_store == NULL ) || ( sgn_store == NULL ) || ( zdstls == NULL ) ) {
-		if ( absv_store != NULL ) free( absv_store );
-		if ( sgn_store != NULL ) free( sgn_store );
-		if ( zdstls != NULL ) free( zdstls );
+	if ( ( absv_store == nullptr ) || ( sgn_store == nullptr ) || ( zdstls == nullptr ) ) {
+		if ( absv_store != nullptr ) free( absv_store );
+		if ( sgn_store != nullptr ) free( sgn_store );
+		if ( zdstls != nullptr ) free( zdstls );
 		sprintf( errormessage, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
@@ -5117,7 +5113,7 @@ INTERN bool pjg_encode_ac_high( aricoder* enc, int cmp )
 /* -----------------------------------------------
 	encodes first row/col AC coefficients to pjg
 	----------------------------------------------- */
-INTERN bool pjg_encode_ac_low( aricoder* enc, int cmp )
+static bool pjg_encode_ac_low( aricoder* enc, int cmp )
 {
 	model_s* mod_len;
 	model_b* mod_sgn;
@@ -5281,7 +5277,7 @@ INTERN bool pjg_encode_ac_low( aricoder* enc, int cmp )
 /* -----------------------------------------------
 	encodes a stream of generic (8bit) data to pjg
 	----------------------------------------------- */
-INTERN bool pjg_encode_generic( aricoder* enc, unsigned char* data, int len )
+static bool pjg_encode_generic( aricoder* enc, unsigned char* data, int len )
 {
 	model_s* model;
 	int i;
@@ -5306,7 +5302,7 @@ INTERN bool pjg_encode_generic( aricoder* enc, unsigned char* data, int len )
 /* -----------------------------------------------
 	encodes one bit to pjg
 	----------------------------------------------- */
-INTERN bool pjg_encode_bit( aricoder* enc, unsigned char bit )
+static bool pjg_encode_bit( aricoder* enc, unsigned char bit )
 {
 	model_b* model;
 	
@@ -5324,7 +5320,7 @@ INTERN bool pjg_encode_bit( aricoder* enc, unsigned char bit )
 /* -----------------------------------------------
 	encodes frequency scanorder to pjg
 	----------------------------------------------- */
-INTERN bool pjg_decode_zstscan( aricoder* dec, int cmp )
+static bool pjg_decode_zstscan( aricoder* dec, int cmp )
 {	
 	model_s* model;;
 	
@@ -5390,7 +5386,7 @@ INTERN bool pjg_decode_zstscan( aricoder* dec, int cmp )
 /* -----------------------------------------------
 	decodes # of non zeroes from pjg (high)
 	----------------------------------------------- */
-INTERN bool pjg_decode_zdst_high( aricoder* dec, int cmp )
+static bool pjg_decode_zdst_high( aricoder* dec, int cmp )
 {
 	model_s* model;
 	
@@ -5430,7 +5426,7 @@ INTERN bool pjg_decode_zdst_high( aricoder* dec, int cmp )
 /* -----------------------------------------------
 	decodes # of non zeroes from pjg (low)
 	----------------------------------------------- */	
-INTERN bool pjg_decode_zdst_low( aricoder* dec, int cmp )
+static bool pjg_decode_zdst_low( aricoder* dec, int cmp )
 {
 	model_s* model;
 	
@@ -5477,7 +5473,7 @@ INTERN bool pjg_decode_zdst_low( aricoder* dec, int cmp )
 /* -----------------------------------------------
 	decodes DC coefficients from pjg
 	----------------------------------------------- */
-INTERN bool pjg_decode_dc( aricoder* dec, int cmp )
+static bool pjg_decode_dc( aricoder* dec, int cmp )
 {
 	unsigned char* segm_tab;
 	
@@ -5526,7 +5522,7 @@ INTERN bool pjg_decode_dc( aricoder* dec, int cmp )
 	
 	// allocate memory for absolute values storage
 	absv_store = (unsigned short*) calloc ( bc, sizeof( short ) );
-	if ( absv_store == NULL ) {
+	if ( absv_store == nullptr ) {
 		sprintf( errormessage, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
@@ -5597,7 +5593,7 @@ INTERN bool pjg_decode_dc( aricoder* dec, int cmp )
 /* -----------------------------------------------
 	decodes high (7x7) AC coefficients to pjg
 	----------------------------------------------- */
-INTERN bool pjg_decode_ac_high( aricoder* dec, int cmp )
+static bool pjg_decode_ac_high( aricoder* dec, int cmp )
 {
 	unsigned char* segm_tab;
 	
@@ -5653,10 +5649,10 @@ INTERN bool pjg_decode_ac_high( aricoder* dec, int cmp )
 	absv_store = (unsigned short*) calloc ( bc, sizeof( short ) );	
 	sgn_store = (unsigned char*) calloc ( bc, sizeof( char ) );
 	zdstls = (unsigned char*) calloc ( bc, sizeof( char ) );
-	if ( ( absv_store == NULL ) || ( sgn_store == NULL ) || ( zdstls == NULL ) ) {
-		if ( absv_store != NULL ) free( absv_store );
-		if ( sgn_store != NULL ) free( sgn_store );
-		if ( zdstls != NULL ) free( zdstls );
+	if ( ( absv_store == nullptr ) || ( sgn_store == nullptr ) || ( zdstls == nullptr ) ) {
+		if ( absv_store != nullptr ) free( absv_store );
+		if ( sgn_store != nullptr ) free( sgn_store );
+		if ( zdstls != nullptr ) free( zdstls );
 		sprintf( errormessage, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
@@ -5781,7 +5777,7 @@ INTERN bool pjg_decode_ac_high( aricoder* dec, int cmp )
 /* -----------------------------------------------
 	decodes high (7x7) AC coefficients to pjg
 	----------------------------------------------- */
-INTERN bool pjg_decode_ac_low( aricoder* dec, int cmp )
+static bool pjg_decode_ac_low( aricoder* dec, int cmp )
 {
 	model_s* mod_len;
 	model_b* mod_sgn;
@@ -5943,7 +5939,7 @@ INTERN bool pjg_decode_ac_low( aricoder* dec, int cmp )
 /* -----------------------------------------------
 	deodes a stream of generic (8bit) data from pjg
 	----------------------------------------------- */
-INTERN bool pjg_decode_generic( aricoder* dec, unsigned char** data, int* len )
+static bool pjg_decode_generic( aricoder* dec, unsigned char** data, int* len )
 {
 	abytewriter* bwrt;
 	model_s* model;
@@ -5973,7 +5969,7 @@ INTERN bool pjg_decode_generic( aricoder* dec, unsigned char** data, int* len )
 	
 	// get data/length and close byte writer
 	(*data) = bwrt->getptr();
-	if ( len != NULL ) (*len) = bwrt->getpos();
+	if ( len != nullptr ) (*len) = bwrt->getpos();
 	delete bwrt;
 	
 	
@@ -5984,7 +5980,7 @@ INTERN bool pjg_decode_generic( aricoder* dec, unsigned char** data, int* len )
 /* -----------------------------------------------
 	decodes one bit from pjg
 	----------------------------------------------- */
-INTERN bool pjg_decode_bit( aricoder* dec, unsigned char* bit )
+static bool pjg_decode_bit( aricoder* dec, unsigned char* bit )
 {
 	model_b* model;
 	
@@ -6001,7 +5997,7 @@ INTERN bool pjg_decode_bit( aricoder* dec, unsigned char* bit )
 /* -----------------------------------------------
 	get zero sort frequency scan vector
 	----------------------------------------------- */
-INTERN void pjg_get_zerosort_scan( unsigned char* sv, int cmp )
+static void pjg_get_zerosort_scan( unsigned char* sv, int cmp )
 {
 	unsigned int zdist[ 64 ]; // distributions of zeroes per band
 	int bc = cmpnfo[cmp].bc;
@@ -6045,7 +6041,7 @@ INTERN void pjg_get_zerosort_scan( unsigned char* sv, int cmp )
 /* -----------------------------------------------
 	optimizes JFIF header for compression
 	----------------------------------------------- */
-INTERN bool pjg_optimize_header( void )
+static bool pjg_optimize_header( void )
 {
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
@@ -6124,7 +6120,7 @@ INTERN bool pjg_optimize_header( void )
 /* -----------------------------------------------
 	undoes the header optimizations
 	----------------------------------------------- */
-INTERN bool pjg_unoptimize_header( void )
+static bool pjg_unoptimize_header( void )
 {
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
@@ -6193,7 +6189,7 @@ INTERN bool pjg_unoptimize_header( void )
 /* -----------------------------------------------
 	preparations for special average context
 	----------------------------------------------- */
-INTERN void pjg_aavrg_prepare( unsigned short** abs_coeffs, int* weights, unsigned short* abs_store, int cmp )
+static void pjg_aavrg_prepare( unsigned short** abs_coeffs, int* weights, unsigned short* abs_store, int cmp )
 {
 	int w = cmpnfo[cmp].bch;
 	
@@ -6217,7 +6213,7 @@ INTERN void pjg_aavrg_prepare( unsigned short** abs_coeffs, int* weights, unsign
 /* -----------------------------------------------
 	special average context used in coeff encoding
 	----------------------------------------------- */
-INTERN int pjg_aavrg_context( unsigned short** abs_coeffs, int* weights, int pos, int p_y, int p_x, int r_x )
+static int pjg_aavrg_context( unsigned short** abs_coeffs, int* weights, int pos, int p_y, int p_x, int r_x )
 {
 	int ctx_avr = 0; // AVERAGE context
 	int w_ctx = 0; // accumulated weight of context
@@ -6274,7 +6270,7 @@ INTERN int pjg_aavrg_context( unsigned short** abs_coeffs, int* weights, int pos
 /* -----------------------------------------------
 	lakhani ac context used in coeff encoding
 	----------------------------------------------- */
-INTERN int pjg_lakh_context( signed short** coeffs_x, signed short** coeffs_a, int* pred_cf, int pos )
+static int pjg_lakh_context( signed short** coeffs_x, signed short** coeffs_a, int* pred_cf, int pos )
 {
 	int pred = 0;
 	
@@ -6298,7 +6294,7 @@ INTERN int pjg_lakh_context( signed short** coeffs_x, signed short** coeffs_a, i
 /* -----------------------------------------------
 	Calculates coordinates for nearest neighbor context
 	----------------------------------------------- */
-INTERN void get_context_nnb( int pos, int w, int *a, int *b )
+static void get_context_nnb( int pos, int w, int *a, int *b )
 {
 	// this function calculates and returns coordinates for
 	// a simple 2D context
@@ -6335,7 +6331,7 @@ INTERN void get_context_nnb( int pos, int w, int *a, int *b )
 	inverse DCT transform using precalc tables (fast)
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-INTERN int idct_2d_fst_8x8( int cmp, int dpos, int ix, int iy )
+static int idct_2d_fst_8x8( int cmp, int dpos, int ix, int iy )
 {
 	int idct = 0;
 	int ixy;
@@ -6419,7 +6415,7 @@ INTERN int idct_2d_fst_8x8( int cmp, int dpos, int ix, int iy )
 /* -----------------------------------------------
 	inverse DCT transform using precalc tables (fast)
 	----------------------------------------------- */
-INTERN int idct_2d_fst_8x1( int cmp, int dpos, int ix, int iy )
+static int idct_2d_fst_8x1( int cmp, int dpos, int ix, int iy )
 {
 	int idct = 0;
 	int ixy;
@@ -6446,7 +6442,7 @@ INTERN int idct_2d_fst_8x1( int cmp, int dpos, int ix, int iy )
 /* -----------------------------------------------
 	inverse DCT transform using precalc tables (fast)
 	----------------------------------------------- */
-INTERN int idct_2d_fst_1x8( int cmp, int dpos, int ix, int iy )
+static int idct_2d_fst_1x8( int cmp, int dpos, int ix, int iy )
 {
 	int idct = 0;
 	int ixy;
@@ -6478,7 +6474,7 @@ INTERN int idct_2d_fst_1x8( int cmp, int dpos, int ix, int iy )
 	returns predictor for collection data
 	----------------------------------------------- */
 #if defined(USE_PLOCOI)
-INTERN int dc_coll_predictor( int cmp, int dpos )
+static int dc_coll_predictor( int cmp, int dpos )
 {
 	signed short* coefs = colldata[ cmp ][ 0 ];
 	int w = cmpnfo[cmp].bch;
@@ -6509,7 +6505,7 @@ INTERN int dc_coll_predictor( int cmp, int dpos )
 	1D DCT predictor for DC coefficients
 	----------------------------------------------- */
 #if !defined(USE_PLOCOI)
-INTERN int dc_1ddct_predictor( int cmp, int dpos )
+static int dc_1ddct_predictor( int cmp, int dpos )
 {
 	int w  = cmpnfo[cmp].bch;
 	int px = ( dpos % w );
@@ -6566,7 +6562,7 @@ INTERN int dc_1ddct_predictor( int cmp, int dpos )
 /* -----------------------------------------------
 	loco-i predictor
 	----------------------------------------------- */
-INTERN inline int plocoi( int a, int b, int c )
+static inline int plocoi( int a, int b, int c )
 {
 	// a -> left; b -> above; c -> above-left
 	int min, max;
@@ -6580,69 +6576,6 @@ INTERN inline int plocoi( int a, int b, int c )
 	return a + b - c;
 }
 
-
-/* -----------------------------------------------
-	calculates median out of an integer array
-	----------------------------------------------- */
-INTERN inline int median_int( int* values, int size )
-{
-	int middle = ( size >> 1 );
-	bool done;
-	int swap;
-	int i;
-	
-	
-	// sort data first
-	done = false;
-	while ( !done ) {
-		done = true;
-		for ( i = 1; i < size; i++ )
-		if ( values[ i ] < values[ i - 1 ] ) {
-			swap = values[ i ];
-			values[ i ] = values[ i - 1 ];
-			values[ i - 1 ] = swap;
-			done = false;
-		}
-	}
-	
-	// return median
-	return ( ( size % 2 ) == 0 ) ?
-		( values[ middle ] + values[ middle - 1 ] ) / 2 : values[ middle ];
-}
-
-
-/* -----------------------------------------------
-	calculates median out of an float array
-	----------------------------------------------- */
-INTERN inline float median_float( float* values, int size )
-{
-	int middle = ( size >> 1 );
-	bool done;
-	float swap;
-	int i;
-	
-	
-	// sort data first
-	done = false;
-	while ( !done ) {
-		done = true;
-		for ( i = 1; i < size; i++ )
-		if ( values[ i ] < values[ i - 1 ] ) {
-			swap = values[ i ];
-			values[ i ] = values[ i - 1 ];
-			values[ i - 1 ] = swap;
-			done = false;
-		}
-	}
-	
-	// return median	
-	if ( ( size % 2 ) == 0 ) {
-		return ( values[ middle ] + values[ middle - 1 ] ) / 2.0;
-	}
-	else
-		return ( values[ middle ] );
-}
-
 /* ----------------------- End of prediction functions -------------------------- */
 
 /* ----------------------- Begin of miscellaneous helper functions -------------------------- */
@@ -6652,7 +6585,7 @@ INTERN inline float median_float( float* values, int size )
 	displays progress bar on screen
 	----------------------------------------------- */
 #if !defined(BUILD_LIB)
-INTERN inline void progress_bar( int current, int last )
+static inline void progress_bar( int current, int last )
 {
 	int barpos = ( ( current * BARLEN ) + ( last / 2 ) ) / last;
 	int i;
@@ -6677,9 +6610,9 @@ INTERN inline void progress_bar( int current, int last )
 	creates filename, callocs memory for it
 	----------------------------------------------- */
 #if !defined(BUILD_LIB)
-INTERN inline char* create_filename( const char* base, const char* extension )
+static inline char* create_filename( const char* base, const char* extension )
 {
-	int len = strlen( base ) + ( ( extension == NULL ) ? 0 : strlen( extension ) + 1 ) + 1;	
+	int len = strlen( base ) + ( ( extension == nullptr ) ? 0 : strlen( extension ) + 1 ) + 1;	
 	char* filename = (char*) calloc( len, sizeof( char ) );	
 	
 	// create a filename from base & extension
@@ -6694,9 +6627,9 @@ INTERN inline char* create_filename( const char* base, const char* extension )
 	creates filename, callocs memory for it
 	----------------------------------------------- */
 #if !defined(BUILD_LIB)
-INTERN inline char* unique_filename( const char* base, const char* extension )
+static inline char* unique_filename( const char* base, const char* extension )
 {
-	int len = strlen( base ) + ( ( extension == NULL ) ? 0 : strlen( extension ) + 1 ) + 1;	
+	int len = strlen( base ) + ( ( extension == nullptr ) ? 0 : strlen( extension ) + 1 ) + 1;	
 	char* filename = (char*) calloc( len, sizeof( char ) );	
 	
 	// create a unique filename using underscores
@@ -6716,16 +6649,16 @@ INTERN inline char* unique_filename( const char* base, const char* extension )
 	changes extension of filename
 	----------------------------------------------- */
 #if !defined(BUILD_LIB)
-INTERN inline void set_extension( char* filename, const char* extension )
+static inline void set_extension( char* filename, const char* extension )
 {
 	char* extstr;
 	
 	// find position of extension in filename	
-	extstr = ( strrchr( filename, '.' ) == NULL ) ?
+	extstr = ( strrchr( filename, '.' ) == nullptr ) ?
 		strrchr( filename, '\0' ) : strrchr( filename, '.' );
 	
 	// set new extension
-	if ( extension != NULL ) {
+	if ( extension != nullptr ) {
 		(*extstr++) = '.';
 		strcpy( extstr, extension );
 	}
@@ -6738,7 +6671,7 @@ INTERN inline void set_extension( char* filename, const char* extension )
 	adds underscore after filename
 	----------------------------------------------- */
 #if !defined(BUILD_LIB)
-INTERN inline void add_underscore( char* filename )
+static inline void add_underscore( char* filename )
 {
 	char* tmpname = (char*) calloc( strlen( filename ) + 1, sizeof( char ) );
 	char* extstr;
@@ -6749,7 +6682,7 @@ INTERN inline void add_underscore( char* filename )
 	extstr = strrchr( filename, '.' );
 	
 	// add underscore before extension
-	if ( extstr != NULL ) {
+	if ( extstr != nullptr ) {
 		(*extstr++) = '_';
 		strcpy( extstr, strrchr( tmpname, '.' ) );
 	}
@@ -6764,12 +6697,12 @@ INTERN inline void add_underscore( char* filename )
 /* -----------------------------------------------
 	checks if a file exists
 	----------------------------------------------- */
-INTERN inline bool file_exists( const char* filename )
+static inline bool file_exists( const char* filename )
 {
 	// needed for both, executable and library
 	FILE* fp = fopen( filename, "rb" );
 	
-	if ( fp == NULL ) return false;
+	if ( fp == nullptr ) return false;
 	else {
 		fclose( fp );
 		return true;
@@ -6785,7 +6718,7 @@ INTERN inline bool file_exists( const char* filename )
 	Writes header file
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-INTERN bool dump_hdr( void )
+static bool dump_hdr( void )
 {
 	const char* ext = "hdr";
 	const char* basename = filelist[ file_no ];
@@ -6802,7 +6735,7 @@ INTERN bool dump_hdr( void )
 	Writes huffman coded file
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-INTERN bool dump_huf( void )
+static bool dump_huf( void )
 {
 	const char* ext = "huf";
 	const char* basename = filelist[ file_no ];
@@ -6819,7 +6752,7 @@ INTERN bool dump_huf( void )
 	Writes collections of DCT coefficients
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-INTERN bool dump_coll( void )
+static bool dump_coll( void )
 {
 	FILE* fp;
 	
@@ -6843,7 +6776,7 @@ INTERN bool dump_coll( void )
 		
 		// open file for output
 		fp = fopen( fn, "wb" );
-		if ( fp == NULL ){
+		if ( fp == nullptr ){
 			sprintf( errormessage, FWR_ERRMSG, fn);
 			errorlevel = 2;
 			return false;
@@ -6930,7 +6863,7 @@ INTERN bool dump_coll( void )
 	Writes zero distribution data to file;
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-INTERN bool dump_zdst( void )
+static bool dump_zdst( void )
 {
 	const char* ext[4];
 	const char* basename;
@@ -6957,7 +6890,7 @@ INTERN bool dump_zdst( void )
 	Writes to file
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-INTERN bool dump_file( const char* base, const char* ext, void* data, int bpv, int size )
+static bool dump_file( const char* base, const char* ext, void* data, int bpv, int size )
 {	
 	FILE* fp;
 	char* fn;
@@ -6967,7 +6900,7 @@ INTERN bool dump_file( const char* base, const char* ext, void* data, int bpv, i
 	
 	// open file for output
 	fp = fopen( fn, "wb" );	
-	if ( fp == NULL ) {
+	if ( fp == nullptr ) {
 		sprintf( errormessage, FWR_ERRMSG, fn);
 		errorlevel = 2;
 		return false;
@@ -6987,7 +6920,7 @@ INTERN bool dump_file( const char* base, const char* ext, void* data, int bpv, i
 	Writes error info file
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-INTERN bool dump_errfile( void )
+static bool dump_errfile( void )
 {
 	FILE* fp;
 	char* fn;
@@ -7006,7 +6939,7 @@ INTERN bool dump_errfile( void )
 	
 	// open file for output
 	fp = fopen( fn, "w" );
-	if ( fp == NULL ){
+	if ( fp == nullptr ){
 		sprintf( errormessage, FWR_ERRMSG, fn);
 		errorlevel = 2;
 		return false;
@@ -7034,7 +6967,7 @@ INTERN bool dump_errfile( void )
 	Writes info to textfile
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-INTERN bool dump_info( void )
+static bool dump_info( void )
 {	
 	FILE* fp;
 	char* fn;
@@ -7052,7 +6985,7 @@ INTERN bool dump_info( void )
 	
 	// open file for output
 	fp = fopen( fn, "w" );
-	if ( fp == NULL ){
+	if ( fp == nullptr ){
 		sprintf( errormessage, FWR_ERRMSG, fn);
 		errorlevel = 2;
 		return false;
@@ -7126,7 +7059,7 @@ INTERN bool dump_info( void )
 	Writes distribution for use in valdist.h
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-INTERN bool dump_dist( void )
+static bool dump_dist( void )
 {
 	FILE* fp;
 	char* fn;
@@ -7142,7 +7075,7 @@ INTERN bool dump_dist( void )
 	// open file for output
 	fp = fopen( fn, "wb" );
 	free( fn );
-	if ( fp == NULL ){
+	if ( fp == nullptr ){
 		sprintf( errormessage, FWR_ERRMSG, fn);
 		errorlevel = 2;
 		return false;
@@ -7173,7 +7106,7 @@ INTERN bool dump_dist( void )
 	Do inverse DCT and write pgms
 	----------------------------------------------- */
 #if !defined(BUILD_LIB) && defined(DEV_BUILD)
-INTERN bool dump_pgm( void )
+static bool dump_pgm( void )
 {	
 	unsigned char* imgdata;
 	
@@ -7200,7 +7133,7 @@ INTERN bool dump_pgm( void )
 		
 		// open file for output
 		fp = fopen( fn, "wb" );		
-		if ( fp == NULL ){
+		if ( fp == nullptr ){
 			sprintf( errormessage, FWR_ERRMSG, fn );
 			errorlevel = 2;
 			return false;
@@ -7209,7 +7142,7 @@ INTERN bool dump_pgm( void )
 		
 		// alloc memory for image data
 		imgdata = (unsigned char*) calloc ( cmpnfo[cmp].bc * 64, sizeof( char ) );
-		if ( imgdata == NULL ) {
+		if ( imgdata == nullptr ) {
 			fclose( fp );
 			sprintf( errormessage, MEM_ERRMSG );
 			errorlevel = 2;
