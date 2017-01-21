@@ -321,6 +321,23 @@ packJPG by Matthias Stirner, 01/2016
 #define MSG_SIZE	128
 #define BARLEN		36
 
+enum ActionType {
+	kCompress = 1,
+	kSplitDump = 2,
+	kCollDump = 3,
+	kFCollDump = 4,
+	kZDstDump = 5,
+	kTxtInfo = 6,
+	kDistInfo = 7,
+	kPgmDump = 8
+};
+
+enum FileType {
+	kJpg = 1,
+	kPjg = 2,
+	kUnk = 3
+};
+
 /* -----------------------------------------------
 	struct declarations
 	----------------------------------------------- */
@@ -600,7 +617,7 @@ static std::string pjgfilename = "";	// name of PJG file
 static int    jpgfilesize;			// size of JPEG file
 static int    pjgfilesize;			// size of PJG file
 static int    jpegtype = 0;			// type of JPEG coding: 0->unknown, 1->sequential, 2->progressive
-static int    filetype;				// type of current file
+static FileType filetype = FileType::kUnk; // type of current file
 static iostream* str_in  = nullptr;	// input stream
 static iostream* str_out = nullptr;	// output stream
 
@@ -654,7 +671,7 @@ static bool disc_meta  = false;	// discard meta-info yes / no
 
 static bool developer  = false;	// allow developers functions yes/no
 static bool auto_set   = true;	// automatic find best settings yes/no
-static int  action = A_COMPRESS;// what to do with JPEG/PJG files
+static ActionType action = ActionType::kCompress;// what to do with JPEG/PJG files
 
 static FILE*  msgout   = stdout;// stream for output of messages
 static bool   pipe_on  = false;	// use stdin/stdout instead of filelist
@@ -662,7 +679,7 @@ static bool   pipe_on  = false;	// use stdin/stdout instead of filelist
 static int  err_tol    = 1;		// error threshold ( proceed on warnings yes (2) / no (1) )
 static bool disc_meta  = false;	// discard meta-info yes / no
 static bool auto_set   = true;	// automatic find best settings yes/no
-static int  action = A_COMPRESS;// what to do with JPEG/PJG files
+static ActionType action = ActionType::kCompress;// what to do with JPEG/PJG files
 #endif
 
 static unsigned char nois_trs[ 4 ] = {6,6,6,6}; // bit pattern noise threshold
@@ -726,7 +743,7 @@ int main( int argc, char** argv )
 	
 	// check if user input is wrong, show help screen if it is
 	if ( (filelist.size() == 0 ) ||
-		( ( !developer ) && ( (action != A_COMPRESS) || (!auto_set) || (verify_lv > 1) ) ) ) {
+		( ( !developer ) && ( (action != ActionType::kCompress) || (!auto_set) || (verify_lv > 1) ) ) ) {
 		show_help();
 		return -1;
 	}
@@ -793,7 +810,7 @@ int main( int argc, char** argv )
 	fprintf( msgout,  "\n\n-> %u file(s) processed, %i error(s), %i warning(s)\n",
 		filelist.size(), error_cnt, warn_cnt );
 	if ( (filelist.size() > error_cnt ) && ( verbosity != 0 ) &&
-	 ( action == A_COMPRESS ) ) {
+	 ( action == ActionType::kCompress) ) {
 		acc_jpgsize /= 1024.0; acc_pjgsize /= 1024.0;
 		total = (double) ( end - begin ) / CLOCKS_PER_SEC; 
 		kbps  = ( total > 0 ) ? ( acc_jpgsize / total ) : acc_jpgsize;
@@ -891,7 +908,7 @@ EXPORT bool pjglib_convert_stream2mem( unsigned char** out_file, unsigned int* o
 	
 	// (re)set buffers
 	reset_buffers();
-	action = A_COMPRESS;
+	action = ActionType::kCompress;
 	
 	// main compression / decompression routines
 	begin = clock();
@@ -915,9 +932,9 @@ EXPORT bool pjglib_convert_stream2mem( unsigned char** out_file, unsigned int* o
 	// copy errormessage / remove files if error (and output is file)
 	if ( errorlevel >= err_tol ) {
 		if ( lib_out_type == 0 ) {
-			if ( filetype == F_JPG ) {
+			if ( filetype == FileType::kJpg ) {
 				if ( file_exists( pjgfilename ) ) remove( pjgfilename.data() );
-			} else if ( filetype == F_PJG ) {
+			} else if ( filetype == FileType::kPjg ) {
 				if ( file_exists( jpgfilename ) ) remove( jpgfilename.data());
 			}
 		}
@@ -933,15 +950,15 @@ EXPORT bool pjglib_convert_stream2mem( unsigned char** out_file, unsigned int* o
 	if ( msg != nullptr ) {
 		switch( filetype )
 		{
-			case F_JPG:
+			case FileType::kJpg:
 				sprintf( msg, "Compressed to %s (%.2f%%) in %ims",
 					pjgfilename.data(), cr, ( total >= 0 ) ? total : -1 );
 				break;
-			case F_PJG:
+			case FileType::kPjg:
 				sprintf( msg, "Decompressed to %s (%.2f%%) in %ims",
 					jpgfilename.data(), cr, ( total >= 0 ) ? total : -1 );
 				break;
-			case F_UNK:
+			case FileType::kUnk:
 				sprintf( msg, "Unknown filetype" );
 				break;	
 		}
@@ -1018,21 +1035,21 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
 	str_in->read( buffer, 1, 2 );
 	if ( ( buffer[0] == 0xFF ) && ( buffer[1] == 0xD8 ) ) {
 		// file is JPEG
-		filetype = F_JPG;
+		filetype = FileType::kJpg;
 		// copy filenames
 		jpgfilename = (  in_type == 0 ) ? (char*) in_src   : "JPG in memory";
 		pjgfilename = ( out_type == 0 ) ? (char*) out_dest : "PJG in memory";
 	}
 	else if ( (buffer[0] == pjg_magic[0]) && (buffer[1] == pjg_magic[1]) ) {
 		// file is PJG
-		filetype = F_PJG;
+		filetype = FileType::kPjg;
 		// copy filenames
 		pjgfilename = (  in_type == 0 ) ? (char*) in_src   : "PJG in memory";
 		jpgfilename = ( out_type == 0 ) ? (char*) out_dest : "JPG in memory";
 	}
 	else {
 		// file is neither
-		filetype = F_UNK;
+		filetype = FileType::kUnk;
 		sprintf( errormessage, "filetype of input stream is unknown" );
 		errorlevel = 2;
 		return;
@@ -1167,31 +1184,31 @@ static void initialize_options( int argc, char** argv )
 			tmp_val = ( tmp_val < 0 ) ? 0 : tmp_val;
 			tmp_val = ( tmp_val > 5 ) ? 5 : tmp_val;
 			collmode = tmp_val;
-			action = A_COLL_DUMP;
+			action = ActionType::kCollDump;
 		}
 		else if ( sscanf( (*argv), "-fcol%i", &tmp_val ) == 1 ) {
 			tmp_val = ( tmp_val < 0 ) ? 0 : tmp_val;
 			tmp_val = ( tmp_val > 5 ) ? 5 : tmp_val;
 			collmode = tmp_val;
-			action = A_FCOLL_DUMP;
+			action = ActionType::kFCollDump;
 		}
 		else if ( strcmp((*argv), "-split") == 0 ) {
-			action = A_SPLIT_DUMP;
+			action = ActionType::kSplitDump;
 		}
 		else if ( strcmp((*argv), "-zdst") == 0 ) {
-			action = A_ZDST_DUMP;
+			action = ActionType::kZDistDump;
 		}	
 		else if ( strcmp((*argv), "-info") == 0 ) {
-			action = A_TXT_INFO;
+			action = ActionType::kTxtInfo;
 		}
 		else if ( strcmp((*argv), "-dist") == 0 ) {
-			action = A_DIST_INFO;
+			action = ActionType::kDistInfo;
 		}
 		else if ( strcmp((*argv), "-pgm") == 0 ) {
-			action = A_PGM_DUMP;
+			action = ActionType::kPgmDump;
 		}
 	   	else if ( ( strcmp((*argv), "-comp") == 0) ) {
-			action = A_COMPRESS;
+			action = ActionType::kCompress;
 		}
 		#endif
 		else if ( strcmp((*argv), "-") == 0 ) {
@@ -1248,11 +1265,11 @@ static void process_ui()
 	jpgfilesize = 0;
 	pjgfilesize = 0;	
 	#if !defined(DEV_BUILD)
-	action = A_COMPRESS;
+	action = ActionType::kCompress;
 	#endif
 	
 	// compare file name, set pipe if needed
-	if ( ( strcmp( filelist[ file_no ].data(), "-" ) == 0 ) && ( action == A_COMPRESS ) ) {
+	if ( ( strcmp( filelist[ file_no ].data(), "-" ) == 0 ) && ( action == ActionType::kCompress ) ) {
 		pipe_on = true;
 		filelist[ file_no ] = "STDIN";
 	}
@@ -1271,16 +1288,16 @@ static void process_ui()
 		execute( check_file );
 		
 		// get specific action message
-		if ( filetype == F_UNK ) actionmsg = "unknown filetype";
+		if ( filetype == FileType::kUnk ) actionmsg = "unknown filetype";
 		else switch ( action ) {
-			case A_COMPRESS:	actionmsg = ( filetype == F_JPG ) ? "Compressing" : "Decompressing";	break;			
-			case A_SPLIT_DUMP:	actionmsg = "Splitting"; break;			
-			case A_COLL_DUMP:	actionmsg = "Extracting Colls"; break;
-			case A_FCOLL_DUMP:	actionmsg = "Extracting FColls"; break;
-			case A_ZDST_DUMP:	actionmsg = "Extracting ZDST lists"; break;			
-			case A_TXT_INFO:	actionmsg = "Extracting info"; break;		
-			case A_DIST_INFO:	actionmsg = "Extracting distributions";	break;		
-			case A_PGM_DUMP:	actionmsg = "Converting"; break;
+			case ActionType::kCompress:	actionmsg = ( filetype == FileType::kJpg ) ? "Compressing" : "Decompressing";	break;			
+			case ActionType::kSplitDump:	actionmsg = "Splitting"; break;			
+			case ActionType::kCollDump:	actionmsg = "Extracting Colls"; break;
+			case ActionType::kFCollDump:	actionmsg = "Extracting FColls"; break;
+			case ActionType::kZDstDump:	actionmsg = "Extracting ZDST lists"; break;			
+			case ActionType::kTxtInfo:	actionmsg = "Extracting info"; break;		
+			case ActionType::kDistInfo:	actionmsg = "Extracting distributions";	break;		
+			case ActionType::kPgmDump:	actionmsg = "Converting"; break;
 		}
 		
 		if ( verbosity < 2 ) fprintf( msgout, "%s -> ", actionmsg );
@@ -1306,10 +1323,10 @@ static void process_ui()
 	if ( str_out != nullptr ) delete( str_out ); str_out = nullptr;
 	if ( str_str != nullptr ) delete( str_str ); str_str = nullptr;
 	// delete if broken or if output not needed
-	if ( ( !pipe_on ) && ( ( errorlevel >= err_tol ) || ( action != A_COMPRESS ) ) ) {
-		if ( filetype == F_JPG ) {
+	if ( ( !pipe_on ) && ( ( errorlevel >= err_tol ) || ( action != ActionType::kCompress ) ) ) {
+		if ( filetype == FileType::kJpg ) {
 			if ( file_exists( pjgfilename ) ) remove( pjgfilename.data());
-		} else if ( filetype == F_PJG ) {
+		} else if ( filetype == FileType::kPjg ) {
 			if ( file_exists( jpgfilename ) ) remove( jpgfilename.data());
 		}
 	}
@@ -1330,7 +1347,7 @@ static void process_ui()
 		switch ( verbosity ) {
 			case 0:			
 				if ( errorlevel < err_tol ) {
-					if ( action == A_COMPRESS ) fprintf( msgout,  "%.2f%%", cr );
+					if ( action == ActionType::kCompress ) fprintf( msgout,  "%.2f%%", cr );
 					else fprintf( msgout, "DONE" );
 				}
 				else fprintf( msgout,  "ERROR" );
@@ -1359,7 +1376,7 @@ static void process_ui()
 			fprintf( msgout, " %s -> %s:\n", get_status( errorfunction ), errtypemsg  );
 			fprintf( msgout, " %s\n", errormessage );
 		}
-		if ( (verbosity > 0) && (errorlevel < err_tol) && (action == A_COMPRESS) ) {
+		if ( (verbosity > 0) && (errorlevel < err_tol) && (action == ActionType::kCompress) ) {
 			if ( total >= 0 ) {
 				fprintf( msgout,  " time taken  : %7i msec\n", total );
 				fprintf( msgout,  " byte per ms : %7i byte\n", bpms );
@@ -1370,7 +1387,7 @@ static void process_ui()
 			}
 			fprintf( msgout,  " comp. ratio : %7.2f %%\n", cr );		
 		}	
-		if ( ( verbosity > 1 ) && ( action == A_COMPRESS ) )
+		if ( ( verbosity > 1 ) && ( action == ActionType::kCompress ) )
 			fprintf( msgout,  "\n" );
 	}
 	else { // progress bar UI
@@ -1504,9 +1521,9 @@ static void show_help()
 
 static void process_file()
 {	
-	if ( filetype == F_JPG ) {
+	if ( filetype == FileType::kJpg ) {
 		switch ( action ) {
-			case A_COMPRESS:
+			case ActionType::kCompress:
 				execute( read_jpeg );
 				execute( decode_jpeg );
 				execute( check_value_range );
@@ -1529,19 +1546,19 @@ static void process_file()
 				break;
 				
 			#if !defined(BUILD_LIB) && defined(DEV_BUILD)
-			case A_SPLIT_DUMP:
+			case ActionType::kSplitDump:
 				execute( read_jpeg );
 				execute( dump_hdr );
 				execute( dump_huf );
 				break;
 				
-			case A_COLL_DUMP:
+			case ActionType::kCollDump:
 				execute( read_jpeg );
 				execute( decode_jpeg );
 				execute( dump_coll );
 				break;
 				
-			case A_FCOLL_DUMP:
+			case ActionType::kFCollDump:
 				execute( read_jpeg );
 				execute( decode_jpeg );
 				execute( check_value_range );
@@ -1550,7 +1567,7 @@ static void process_file()
 				execute( dump_coll );
 				break;
 				
-			case A_ZDST_DUMP:
+			case ActionType::kZDstDump:
 				execute( read_jpeg );
 				execute( decode_jpeg );
 				execute( check_value_range );
@@ -1560,12 +1577,12 @@ static void process_file()
 				execute( dump_zdst );
 				break;
 				
-			case A_TXT_INFO:
+			case ActionType::kTxtInfo:
 				execute( read_jpeg );
 				execute( dump_info );
 				break;
 				
-			case A_DIST_INFO:
+			case ActionType::kDistInfo:
 				execute( read_jpeg );
 				execute( decode_jpeg );
 				execute( check_value_range );
@@ -1574,7 +1591,7 @@ static void process_file()
 				execute( dump_dist );
 				break;
 			
-			case A_PGM_DUMP:
+			case ActionType::kPgmDump:
 				execute( read_jpeg );
 				execute( decode_jpeg );
 				execute( adapt_icos );
@@ -1586,10 +1603,10 @@ static void process_file()
 			#endif
 		}
 	}
-	else if ( filetype == F_PJG )	{
+	else if ( filetype == FileType::kPjg )	{
 		switch ( action )
 		{
-			case A_COMPRESS:
+			case ActionType::kCompress:
 				execute( unpack_pjg );
 				execute( adapt_icos );
 				execute( unpredict_dc );
@@ -1612,7 +1629,7 @@ static void process_file()
 				break;
 				
 			#if !defined(BUILD_LIB) && defined(DEV_BUILD)
-			case A_SPLIT_DUMP:
+			case ActionType::kSplitDump:
 				execute( unpack_pjg );
 				execute( adapt_icos );
 				execute( unpredict_dc );
@@ -1621,34 +1638,34 @@ static void process_file()
 				execute( dump_huf );
 				break;
 				
-			case A_COLL_DUMP:
+			case ActionType::kCollDump:
 				execute( unpack_pjg );
 				execute( adapt_icos );			
 				execute( unpredict_dc );
 				execute( dump_coll );
 				break;
 				
-			case A_FCOLL_DUMP:				
+			case ActionType::kFCollDump:				
 				execute( unpack_pjg );
 				execute( dump_coll );
 				break;
 				
-			case A_ZDST_DUMP:
+			case ActionType::kZDstDump:
 				execute( unpack_pjg );
 				execute( dump_zdst );
 				break;
 			
-			case A_TXT_INFO:
+			case ActionType::kTxtInfo:
 				execute( unpack_pjg );
 				execute( dump_info );
 				break;
 			
-			case A_DIST_INFO:
+			case ActionType::kDistInfo:
 				execute( unpack_pjg );
 				execute( dump_dist );
 				break;
 			
-			case A_PGM_DUMP:
+			case ActionType::kPgmDump:
 				execute( unpack_pjg );
 				execute( adapt_icos );
 				execute( unpredict_dc );
@@ -1753,7 +1770,7 @@ static bool check_file()
 	
 	// immediately return error if 2 bytes can't be read
 	if ( str_in->read( fileid, 1, 2 ) != 2 ) { 
-		filetype = F_UNK;
+		filetype = FileType::kUnk;
 		sprintf( errormessage, "file doesn't contain enough data" );
 		errorlevel = 2;
 		return false;
@@ -1762,7 +1779,7 @@ static bool check_file()
 	// check file id, determine filetype
 	if ( ( fileid[0] == 0xFF ) && ( fileid[1] == 0xD8 ) ) {
 		// file is JPEG
-		filetype = F_JPG;
+		filetype = FileType::kJpg;
 		// create filenames
 		if ( !pipe_on ) {
 			jpgfilename = filename;
@@ -1798,7 +1815,7 @@ static bool check_file()
 	}
 	else if ( ( fileid[0] == pjg_magic[0] ) && ( fileid[1] == pjg_magic[1] ) ) {
 		// file is PJG
-		filetype = F_PJG;
+		filetype = FileType::kPjg;
 		// create filenames
 		if ( !pipe_on ) {
 			pjgfilename = filename;
@@ -1822,7 +1839,7 @@ static bool check_file()
 	}
 	else {
 		// file is neither
-		filetype = F_UNK;
+		filetype = FileType::kUnk;
 		sprintf( errormessage, "filetype of file \"%s\" is unknown", filename.data());
 		errorlevel = 2;
 		return false;		
