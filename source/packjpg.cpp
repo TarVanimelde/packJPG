@@ -416,28 +416,28 @@ static bool jpg_setup_imginfo();
 static bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char* segment );
 static bool jpg_rebuild_header();
 
-static int jpg_decode_block_seq( abitreader* huffr, huffTree* dctree, huffTree* actree, short* block );
+static int jpg_decode_block_seq( const std::unique_ptr<abitreader>& huffr, huffTree* dctree, huffTree* actree, short* block );
 static int jpg_encode_block_seq( const std::unique_ptr<abitwriter>& huffw, huffCodes* dctbl, huffCodes* actbl, short* block );
 
-static int jpg_decode_dc_prg_fs( abitreader* huffr, huffTree* dctree, short* block );
+static int jpg_decode_dc_prg_fs(const std::unique_ptr<abitreader>& huffr, huffTree* dctree, short* block );
 static int jpg_encode_dc_prg_fs(const std::unique_ptr<abitwriter>& huffw, huffCodes* dctbl, short* block );
-static int jpg_decode_ac_prg_fs( abitreader* huffr, huffTree* actree, short* block,
+static int jpg_decode_ac_prg_fs(const std::unique_ptr<abitreader>& huffr, huffTree* actree, short* block,
 						int* eobrun, int from, int to );
 static int jpg_encode_ac_prg_fs(const std::unique_ptr<abitwriter>& huffw, huffCodes* actbl, short* block,
 						int* eobrun, int from, int to );
 
-static int jpg_decode_dc_prg_sa( abitreader* huffr, short* block );
+static int jpg_decode_dc_prg_sa(const std::unique_ptr<abitreader>& huffr, short* block );
 static int jpg_encode_dc_prg_sa(const std::unique_ptr<abitwriter>& huffw, short* block );
-static int jpg_decode_ac_prg_sa( abitreader* huffr, huffTree* actree, short* block,
+static int jpg_decode_ac_prg_sa(const std::unique_ptr<abitreader>& huffr, huffTree* actree, short* block,
 						int* eobrun, int from, int to );
 static int jpg_encode_ac_prg_sa(const std::unique_ptr<abitwriter>& huffw, const std::unique_ptr<abytewriter>&  storw, huffCodes* actbl,
 						short* block, int* eobrun, int from, int to );
 
-static int jpg_decode_eobrun_sa( abitreader* huffr, short* block, int* eobrun, int from, int to );
+static int jpg_decode_eobrun_sa(const std::unique_ptr<abitreader>& huffr, short* block, int* eobrun, int from, int to );
 static int jpg_encode_eobrun(const std::unique_ptr<abitwriter>& huffw, huffCodes* actbl, int* eobrun );
 static int jpg_encode_crbits(const std::unique_ptr<abitwriter>& huffw, const std::unique_ptr<abytewriter>& storw );
 
-static int jpg_next_huffcode( abitreader *huffw, huffTree *ctree );
+static int jpg_next_huffcode(const std::unique_ptr<abitreader>& huffr, huffTree *ctree );
 static int jpg_next_mcupos( int* mcu, int* cmp, int* csc, int* sub, int* dpos, int* rstw );
 static int jpg_next_mcuposn( int* cmp, int* dpos, int* rstw );
 static int jpg_skip_eobrun( int* cmp, int* dpos, int* rstw, int* eobrun );
@@ -2324,7 +2324,6 @@ static bool merge_jpeg()
 
 static bool decode_jpeg()
 {
-	abitreader* huffr; // bitwise reader for image data
 	
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
@@ -2342,7 +2341,7 @@ static bool decode_jpeg()
 	
 	
 	// open huffman coded image data for input in abitreader
-	huffr = new abitreader( huffdata, hufs );
+	auto huffr = std::make_unique<abitreader>( huffdata, hufs ); // Bitwise reader for image data.
 	
 	// preset count of scans
 	scnc = 0;
@@ -2372,7 +2371,6 @@ static bool decode_jpeg()
 			if ( ( ( cs_sal == 0 ) && ( htset[ 0 ][ cmpnfo[cmp].huffdc ] == 0 ) ) ||
 				 ( ( cs_sah >  0 ) && ( htset[ 1 ][ cmpnfo[cmp].huffac ] == 0 ) ) ) {
 				sprintf( errormessage, "huffman table missing in scan%i", scnc );
-				delete huffr;
 				errorlevel = 2;
 				return false;
 			}
@@ -2642,7 +2640,6 @@ static bool decode_jpeg()
 			if ( sta == -1 ) { // status -1 means error
 				sprintf( errormessage, "decode error in scan%i / mcu%i",
 					scnc, ( cs_cmpc > 1 ) ? mcu : dpos );
-				delete huffr;
 				errorlevel = 2;
 				return false;
 			}
@@ -2665,10 +2662,6 @@ static bool decode_jpeg()
 		sprintf( errormessage, "surplus data found after coded image data" );
 		errorlevel = 1;
 	}
-	
-	// clean up
-	delete( huffr );
-	
 	
 	return true;
 }
@@ -3837,7 +3830,7 @@ static bool jpg_rebuild_header()
 /* -----------------------------------------------
 	sequential block decoding routine
 	----------------------------------------------- */
-static int jpg_decode_block_seq( abitreader* huffr, huffTree* dctree, huffTree* actree, short* block )
+static int jpg_decode_block_seq(const std::unique_ptr<abitreader>& huffr, huffTree* dctree, huffTree* actree, short* block )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -3944,7 +3937,7 @@ static int jpg_encode_block_seq(const std::unique_ptr<abitwriter>&huffw, huffCod
 /* -----------------------------------------------
 	progressive DC decoding routine
 	----------------------------------------------- */
-static int jpg_decode_dc_prg_fs( abitreader* huffr, huffTree* dctree, short* block )
+static int jpg_decode_dc_prg_fs(const std::unique_ptr<abitreader>& huffr, huffTree* dctree, short* block )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -3988,7 +3981,7 @@ static int jpg_encode_dc_prg_fs(const std::unique_ptr<abitwriter>& huffw, huffCo
 /* -----------------------------------------------
 	progressive AC decoding routine
 	----------------------------------------------- */
-static int jpg_decode_ac_prg_fs( abitreader* huffr, huffTree* actree, short* block, int* eobrun, int from, int to )
+static int jpg_decode_ac_prg_fs(const std::unique_ptr<abitreader>& huffr, huffTree* actree, short* block, int* eobrun, int from, int to )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4094,7 +4087,7 @@ static int jpg_encode_ac_prg_fs(const std::unique_ptr<abitwriter>& huffw, huffCo
 /* -----------------------------------------------
 	progressive DC SA decoding routine
 	----------------------------------------------- */
-static int jpg_decode_dc_prg_sa( abitreader* huffr, short* block )
+static int jpg_decode_dc_prg_sa(const std::unique_ptr<abitreader>& huffr, short* block )
 {
 	// decode next bit of dc coefficient
 	block[ 0 ] = huffr->read( 1 );
@@ -4120,7 +4113,7 @@ static int jpg_encode_dc_prg_sa(const std::unique_ptr<abitwriter>& huffw, short*
 /* -----------------------------------------------
 	progressive AC SA decoding routine
 	----------------------------------------------- */
-static int jpg_decode_ac_prg_sa( abitreader* huffr, huffTree* actree, short* block, int* eobrun, int from, int to )
+static int jpg_decode_ac_prg_sa(const std::unique_ptr<abitreader>& huffr, huffTree* actree, short* block, int* eobrun, int from, int to )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4277,7 +4270,7 @@ static int jpg_encode_ac_prg_sa(const std::unique_ptr<abitwriter>& huffw, const 
 /* -----------------------------------------------
 	run of EOB SA decoding routine
 	----------------------------------------------- */
-static int jpg_decode_eobrun_sa( abitreader* huffr, short* block, int* eobrun, int from, int to )
+static int jpg_decode_eobrun_sa(const std::unique_ptr<abitreader>& huffr, short* block, int* eobrun, int from, int to )
 {
 	unsigned short n;
 	int bpos;
@@ -4356,13 +4349,13 @@ static int jpg_encode_crbits(const std::unique_ptr<abitwriter>& huffw, const std
 /* -----------------------------------------------
 	returns next code (from huffman-tree & -data)
 	----------------------------------------------- */
-static int jpg_next_huffcode( abitreader *huffw, huffTree *ctree )
+static int jpg_next_huffcode(const std::unique_ptr<abitreader>& huffr, huffTree *ctree )
 {	
 	int node = 0;
 	
 	
 	while ( node < 256 ) {
-		node = ( huffw->read( 1 ) == 1 ) ?
+		node = ( huffr->read( 1 ) == 1 ) ?
 				ctree->r[ node ] : ctree->l[ node ];
 		if ( node == 0 ) break;
 	}
