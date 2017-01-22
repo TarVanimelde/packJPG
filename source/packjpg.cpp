@@ -417,25 +417,25 @@ static bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 static bool jpg_rebuild_header();
 
 static int jpg_decode_block_seq( abitreader* huffr, huffTree* dctree, huffTree* actree, short* block );
-static int jpg_encode_block_seq( abitwriter* huffw, huffCodes* dctbl, huffCodes* actbl, short* block );
+static int jpg_encode_block_seq( const std::unique_ptr<abitwriter>& huffw, huffCodes* dctbl, huffCodes* actbl, short* block );
 
 static int jpg_decode_dc_prg_fs( abitreader* huffr, huffTree* dctree, short* block );
-static int jpg_encode_dc_prg_fs( abitwriter* huffw, huffCodes* dctbl, short* block );
+static int jpg_encode_dc_prg_fs(const std::unique_ptr<abitwriter>& huffw, huffCodes* dctbl, short* block );
 static int jpg_decode_ac_prg_fs( abitreader* huffr, huffTree* actree, short* block,
 						int* eobrun, int from, int to );
-static int jpg_encode_ac_prg_fs( abitwriter* huffw, huffCodes* actbl, short* block,
+static int jpg_encode_ac_prg_fs(const std::unique_ptr<abitwriter>& huffw, huffCodes* actbl, short* block,
 						int* eobrun, int from, int to );
 
 static int jpg_decode_dc_prg_sa( abitreader* huffr, short* block );
-static int jpg_encode_dc_prg_sa( abitwriter* huffw, short* block );
+static int jpg_encode_dc_prg_sa(const std::unique_ptr<abitwriter>& huffw, short* block );
 static int jpg_decode_ac_prg_sa( abitreader* huffr, huffTree* actree, short* block,
 						int* eobrun, int from, int to );
-static int jpg_encode_ac_prg_sa( abitwriter* huffw, const std::unique_ptr<abytewriter>&  storw, huffCodes* actbl,
+static int jpg_encode_ac_prg_sa(const std::unique_ptr<abitwriter>& huffw, const std::unique_ptr<abytewriter>&  storw, huffCodes* actbl,
 						short* block, int* eobrun, int from, int to );
 
 static int jpg_decode_eobrun_sa( abitreader* huffr, short* block, int* eobrun, int from, int to );
-static int jpg_encode_eobrun( abitwriter* huffw, huffCodes* actbl, int* eobrun );
-static int jpg_encode_crbits( abitwriter* huffw, const std::unique_ptr<abytewriter>& storw );
+static int jpg_encode_eobrun(const std::unique_ptr<abitwriter>& huffw, huffCodes* actbl, int* eobrun );
+static int jpg_encode_crbits(const std::unique_ptr<abitwriter>& huffw, const std::unique_ptr<abytewriter>& storw );
 
 static int jpg_next_huffcode( abitreader *huffw, huffTree *ctree );
 static int jpg_next_mcupos( int* mcu, int* cmp, int* csc, int* sub, int* dpos, int* rstw );
@@ -2680,7 +2680,6 @@ static bool decode_jpeg()
 
 static bool recode_jpeg()
 {
-	abitwriter*  huffw; // bitwise writer for image data
 	
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
@@ -2698,7 +2697,7 @@ static bool recode_jpeg()
 	
 	
 	// open huffman coded image data in abitwriter
-	huffw = new abitwriter( 0 );
+	auto huffw = std::make_unique<abitwriter>( 0 ); // Bitwise writer for image data.
 	huffw->set_fillbit( padbit );
 	
 	// init storage writer
@@ -2952,7 +2951,6 @@ static bool recode_jpeg()
 			if ( sta == -1 ) { // status -1 means error
 				sprintf( errormessage, "encode error in scan%i / mcu%i",
 					scnc, ( cs_cmpc > 1 ) ? mcu : dpos );
-				delete huffw;
 				errorlevel = 2;
 				return false;
 			}
@@ -2969,7 +2967,6 @@ static bool recode_jpeg()
 	
 	// safety check for error in huffwriter
 	if ( huffw->error ()) {
-		delete huffw;
 		sprintf( errormessage, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
@@ -2978,7 +2975,6 @@ static bool recode_jpeg()
 	// get data into huffdata
 	huffdata = huffw->getptr();
 	hufs = huffw->getpos();	
-	delete huffw;
 	
 	// store last scan & restart positions
 	scnp[ scnc ] = hufs;
@@ -3896,7 +3892,7 @@ static int jpg_decode_block_seq( abitreader* huffr, huffTree* dctree, huffTree* 
 /* -----------------------------------------------
 	sequential block encoding routine
 	----------------------------------------------- */
-static int jpg_encode_block_seq( abitwriter* huffw, huffCodes* dctbl, huffCodes* actbl, short* block )
+static int jpg_encode_block_seq(const std::unique_ptr<abitwriter>&huffw, huffCodes* dctbl, huffCodes* actbl, short* block )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -3971,7 +3967,7 @@ static int jpg_decode_dc_prg_fs( abitreader* huffr, huffTree* dctree, short* blo
 /* -----------------------------------------------
 	progressive DC encoding routine
 	----------------------------------------------- */
-static int jpg_encode_dc_prg_fs( abitwriter* huffw, huffCodes* dctbl, short* block )
+static int jpg_encode_dc_prg_fs(const std::unique_ptr<abitwriter>& huffw, huffCodes* dctbl, short* block )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4045,7 +4041,7 @@ static int jpg_decode_ac_prg_fs( abitreader* huffr, huffTree* actree, short* blo
 /* -----------------------------------------------
 	progressive AC encoding routine
 	----------------------------------------------- */
-static int jpg_encode_ac_prg_fs( abitwriter* huffw, huffCodes* actbl, short* block, int* eobrun, int from, int to )
+static int jpg_encode_ac_prg_fs(const std::unique_ptr<abitwriter>& huffw, huffCodes* actbl, short* block, int* eobrun, int from, int to )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4111,7 +4107,7 @@ static int jpg_decode_dc_prg_sa( abitreader* huffr, short* block )
 /* -----------------------------------------------
 	progressive DC SA encoding routine
 	----------------------------------------------- */
-static int jpg_encode_dc_prg_sa( abitwriter* huffw, short* block )
+static int jpg_encode_dc_prg_sa(const std::unique_ptr<abitwriter>& huffw, short* block )
 {
 	// enocode next bit of dc coefficient
 	huffw->write( block[ 0 ], 1 );
@@ -4198,7 +4194,7 @@ static int jpg_decode_ac_prg_sa( abitreader* huffr, huffTree* actree, short* blo
 /* -----------------------------------------------
 	progressive AC SA encoding routine
 	----------------------------------------------- */
-static int jpg_encode_ac_prg_sa( abitwriter* huffw, const std::unique_ptr<abytewriter>& storw, huffCodes* actbl, short* block, int* eobrun, int from, int to )
+static int jpg_encode_ac_prg_sa(const std::unique_ptr<abitwriter>& huffw, const std::unique_ptr<abytewriter>& storw, huffCodes* actbl, short* block, int* eobrun, int from, int to )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4303,7 +4299,7 @@ static int jpg_decode_eobrun_sa( abitreader* huffr, short* block, int* eobrun, i
 /* -----------------------------------------------
 	run of EOB encoding routine
 	----------------------------------------------- */
-static int jpg_encode_eobrun( abitwriter* huffw, huffCodes* actbl, int* eobrun )
+static int jpg_encode_eobrun(const std::unique_ptr<abitwriter>& huffw, huffCodes* actbl, int* eobrun )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4333,7 +4329,7 @@ static int jpg_encode_eobrun( abitwriter* huffw, huffCodes* actbl, int* eobrun )
 /* -----------------------------------------------
 	correction bits encoding routine
 	----------------------------------------------- */
-static int jpg_encode_crbits( abitwriter* huffw, const std::unique_ptr<abytewriter>& storw )
+static int jpg_encode_crbits(const std::unique_ptr<abitwriter>& huffw, const std::unique_ptr<abytewriter>& storw )
 {	
 	unsigned char* data;
 	int len;
