@@ -283,6 +283,7 @@ packJPG by Matthias Stirner, 01/2016
 #include <memory>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #if defined BUILD_DLL // define BUILD_LIB from the compiler options if you want to compile a DLL!
 	#define BUILD_LIB
@@ -4812,18 +4813,11 @@ static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
 {
 	unsigned char* segm_tab;
 	
-	unsigned char* zdstls; // pointer to zero distribution list
-	unsigned char* eob_x; // pointer to x eobs
-	unsigned char* eob_y; // pointer to y eobs
 	signed short* coeffs; // pointer to current coefficent data
 	
-	unsigned short* absv_store; // absolute coefficients values storage
 	unsigned short* c_absc[ 6 ]; // quick access array for contexts
 	int c_weight[ 6 ]; // weighting for contexts
 	
-	unsigned char* sgn_store; // sign storage for context	
-	unsigned char* sgn_nbh; // left signs neighbor
-	unsigned char* sgn_nbv; // upper signs neighbor
 
 	int ctx_avr; // 'average' context
 	int ctx_len; // context for bit length
@@ -4848,42 +4842,30 @@ static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
 	segm_tab = segm_tables[ segm_cnt[ cmp ] - 1 ];
 	
 	// init models for bitlenghts and -patterns
-	auto mod_len = std::make_unique<model_s>( 11, ( segm_cnt[cmp] > 11 ) ? segm_cnt[cmp] : 11, 2 );
-	auto mod_res = std::make_unique<model_b>( ( segm_cnt[cmp] < 16 ) ? 1 << 4 : segm_cnt[cmp], 2 );
-	auto mod_sgn = std::make_unique<model_b>( 9, 1 );
+	auto mod_len = std::make_unique<model_s>(11, std::max(unsigned char(11), segm_cnt[cmp]), 2);
+	auto mod_res = std::make_unique<model_b>(std::max(unsigned char(16), segm_cnt[cmp]), 2);
+	auto mod_sgn = std::make_unique<model_b>(9, 1);
 	
 	// set width/height of each band
 	bc = cmpnfo[cmp].bc;
 	w = cmpnfo[cmp].bch;
 	
 	// allocate memory for absolute values & signs storage
-	absv_store = (unsigned short*) calloc ( bc, sizeof( short ) );	
-	sgn_store = (unsigned char*) calloc ( bc, sizeof( char ) );
-	zdstls = (unsigned char*) calloc ( bc, sizeof( char ) );
-	if ( ( absv_store == nullptr ) || ( sgn_store == nullptr ) || ( zdstls == nullptr ) ) {
-		if ( absv_store != nullptr ) free( absv_store );
-		if ( sgn_store != nullptr ) free( sgn_store );
-		if ( zdstls != nullptr ) free( zdstls );
-		sprintf( errormessage, MEM_ERRMSG );
-		errorlevel = 2;
-		return false;
-	}
+	std::vector<unsigned short> absv_store(bc); // absolute coefficients values storage
+	std::vector<unsigned char> sgn_store(bc); // sign storage for context	
+	std::vector<unsigned char> zdstls(zdstdata[cmp], zdstdata[cmp] + bc); // Copy of zero distribution list
 	
 	// set up quick access arrays for signs context
-	sgn_nbh = sgn_store - 1;
-	sgn_nbv = sgn_store - w;	
+	const auto sgn_nbh = sgn_store.data() - 1; // left signs neighbor
+	const auto sgn_nbv = sgn_store.data() - w; // upper signs neighbor
 	
 	// locally store pointer to eob x / eob y
-	eob_x = eobxhigh[ cmp ];
-	eob_y = eobyhigh[ cmp ];
+	auto eob_x = eobxhigh[ cmp ]; // pointer to x eobs
+	auto eob_y = eobyhigh[ cmp ]; // pointer to y eobs
 	
 	// preset x/y eobs
-	memset( eob_x, 0x00, bc * sizeof( char ) );
-	memset( eob_y, 0x00, bc * sizeof( char ) );
-	
-	// make a local copy of the zero distribution list
-	for ( dpos = 0; dpos < bc; dpos++ )
-		zdstls[ dpos ] = zdstdata[ cmp ][ dpos ];
+	std::fill_n(eob_x, bc, unsigned char(0));
+	std::fill_n(eob_y, bc, unsigned char(0));
 	
 	// work through lower 7x7 bands in order of freqscan
 	for ( i = 1; i < 64; i++ )
@@ -4897,11 +4879,11 @@ static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
 			continue; // process remaining coefficients elsewhere
 	
 		// preset absolute values/sign storage
-		memset( absv_store, 0x00, bc * sizeof( short ) );
-		memset( sgn_store, 0x00, bc * sizeof( char ) );
+		std::fill(std::begin(absv_store), std::end(absv_store), unsigned short(0));
+		std::fill(std::begin(sgn_store), std::end(sgn_store), unsigned char(0));
 		
 		// set up average context quick access arrays
-		pjg_aavrg_prepare( c_absc, c_weight, absv_store, cmp );
+		pjg_aavrg_prepare( c_absc, c_weight, absv_store.data(), cmp );
 		
 		// locally store pointer to coefficients
 		coeffs = colldata[ cmp ][ bpos ];
@@ -4971,11 +4953,6 @@ static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
 		mod_res->flush_model( 1 );
 		mod_sgn->flush_model( 1 );
 	}
-	
-	// free memory / clear models
-	free( absv_store );
-	free( sgn_store );
-	free( zdstls );
 	
 	return true;
 }
@@ -5417,18 +5394,10 @@ static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
 {
 	unsigned char* segm_tab;
 	
-	unsigned char* zdstls; // pointer to zero distribution list
-	unsigned char* eob_x; // pointer to x eobs
-	unsigned char* eob_y; // pointer to y eobs
 	signed short* coeffs; // pointer to current coefficent data
 	
-	unsigned short* absv_store; // absolute coefficients values storage
 	unsigned short* c_absc[ 6 ]; // quick access array for contexts
 	int c_weight[ 6 ]; // weighting for contexts
-	
-	unsigned char* sgn_store; // sign storage for context	
-	unsigned char* sgn_nbh; // left signs neighbor
-	unsigned char* sgn_nbv; // upper signs neighbor
 
 	int ctx_avr; // 'average' context
 	int ctx_len; // context for bit length
@@ -5452,43 +5421,31 @@ static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
 	// decide segmentation setting
 	segm_tab = segm_tables[ segm_cnt[ cmp ] - 1 ];
 	
-	// init models for bitlenghts and -patterns
-	auto mod_len = std::make_unique<model_s>( 11, ( segm_cnt[cmp] > 11 ) ? segm_cnt[cmp] : 11, 2 );
-	auto mod_res = std::make_unique<model_b>( ( segm_cnt[cmp] < 16 ) ? 1 << 4 : segm_cnt[cmp], 2 );
-	auto mod_sgn = std::make_unique<model_b>( 9, 1 );
+	// init models for bitlengths and -patterns
+	auto mod_len = std::make_unique<model_s>(11, std::max(unsigned char(11), segm_cnt[cmp]), 2);
+	auto mod_res = std::make_unique<model_b>(std::max(unsigned char(16), segm_cnt[cmp]), 2);
+	auto mod_sgn = std::make_unique<model_b>(9, 1);
 	
 	// set width/height of each band
 	bc = cmpnfo[cmp].bc;
 	w = cmpnfo[cmp].bch;
 	
 	// allocate memory for absolute values & signs storage
-	absv_store = (unsigned short*) calloc ( bc, sizeof( short ) );	
-	sgn_store = (unsigned char*) calloc ( bc, sizeof( char ) );
-	zdstls = (unsigned char*) calloc ( bc, sizeof( char ) );
-	if ( ( absv_store == nullptr ) || ( sgn_store == nullptr ) || ( zdstls == nullptr ) ) {
-		if ( absv_store != nullptr ) free( absv_store );
-		if ( sgn_store != nullptr ) free( sgn_store );
-		if ( zdstls != nullptr ) free( zdstls );
-		sprintf( errormessage, MEM_ERRMSG );
-		errorlevel = 2;
-		return false;
-	}
+	std::vector<unsigned short> absv_store(bc); // absolute coefficients values storage
+	std::vector<unsigned char> sgn_store(bc); // sign storage for context	
+	std::vector<unsigned char> zdstls(zdstdata[cmp], zdstdata[cmp] + bc); // Copy of zero distribution list.
 	
 	// set up quick access arrays for signs context
-	sgn_nbh = sgn_store - 1;
-	sgn_nbv = sgn_store - w;	
+	const auto sgn_nbh = sgn_store.data() - 1; // left signs neighbor
+	const auto sgn_nbv = sgn_store.data() - w;	// upper signs neighbor
 	
 	// locally store pointer to eob x / eob y
-	eob_x = eobxhigh[ cmp ];
-	eob_y = eobyhigh[ cmp ];
+	auto eob_x = eobxhigh[ cmp ]; // pointer to x eobs
+	auto eob_y = eobyhigh[ cmp ]; // pointer to y eobs
 	
 	// preset x/y eobs
-	memset( eob_x, 0x00, bc * sizeof( char ) );
-	memset( eob_y, 0x00, bc * sizeof( char ) );
-	
-	// make a local copy of the zero distribution list
-	for ( dpos = 0; dpos < bc; dpos++ )
-		zdstls[ dpos ] = zdstdata[ cmp ][ dpos ];
+	std::fill_n(eob_x, bc, unsigned char(0));
+	std::fill_n(eob_y, bc, unsigned char(0));
 	
 	// work through lower 7x7 bands in order of freqscan
 	for ( i = 1; i < 64; i++ )
@@ -5502,11 +5459,11 @@ static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
 				continue; // process remaining coefficients elsewhere
 		
 		// preset absolute values/sign storage
-		memset( absv_store, 0x00, bc * sizeof( short ) );
-		memset( sgn_store, 0x00, bc * sizeof( char ) );
+		std::fill(std::begin(absv_store), std::end(absv_store), unsigned short(0));
+		std::fill(std::begin(sgn_store), std::end(sgn_store), unsigned char(0));
 		
 		// set up average context quick access arrays
-		pjg_aavrg_prepare( c_absc, c_weight, absv_store, cmp );
+		pjg_aavrg_prepare( c_absc, c_weight, absv_store.data(), cmp );
 		
 		// locally store pointer to coefficients
 		coeffs = colldata[ cmp ][ bpos ];
@@ -5576,11 +5533,6 @@ static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
 		mod_res->flush_model( 1 );
 		mod_sgn->flush_model( 1 );
 	}
-	
-	// free memory / clear models
-	free( absv_store );
-	free( sgn_store );
-	free( zdstls );
 	
 	return true;
 }
