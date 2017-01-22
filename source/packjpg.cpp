@@ -444,27 +444,27 @@ static void jpg_build_huffcodes( unsigned char *clen, unsigned char *cval,
 	function declarations: pjg-specific
 	----------------------------------------------- */
 	
-static bool pjg_encode_zstscan( const std::unique_ptr<aricoder>& enc, int cmp );
-static bool pjg_encode_zdst_high(const std::unique_ptr<aricoder>& enc, int cmp );
-static bool pjg_encode_zdst_low(const std::unique_ptr<aricoder>& enc, int cmp );
-static bool pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp );
-static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp );
-static bool pjg_encode_ac_low(const std::unique_ptr<aricoder>& enc, int cmp );
-static bool pjg_encode_generic(const std::unique_ptr<aricoder>& enc, unsigned char* data, int len );
-static bool pjg_encode_bit(const std::unique_ptr<aricoder>& enc, unsigned char bit );
+static void pjg_encode_zstscan( const std::unique_ptr<aricoder>& enc, int cmp );
+static void pjg_encode_zdst_high(const std::unique_ptr<aricoder>& enc, int cmp );
+static void pjg_encode_zdst_low(const std::unique_ptr<aricoder>& enc, int cmp );
+static void pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp );
+static void pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp );
+static void pjg_encode_ac_low(const std::unique_ptr<aricoder>& enc, int cmp );
+static void pjg_encode_generic(const std::unique_ptr<aricoder>& enc, unsigned char* data, int len );
+static void pjg_encode_bit(const std::unique_ptr<aricoder>& enc, unsigned char bit );
 
-static bool pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp );
-static bool pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp );
-static bool pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp );
-static bool pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp );
-static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp );
-static bool pjg_decode_ac_low(const std::unique_ptr<aricoder>& dec, int cmp );
-static bool pjg_decode_generic(const std::unique_ptr<aricoder>& dec, unsigned char** data, int* len );
-static bool pjg_decode_bit(const std::unique_ptr<aricoder>& dec, unsigned char* bit );
+static void pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp );
+static void pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp );
+static void pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp );
+static void pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp );
+static void pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp );
+static void pjg_decode_ac_low(const std::unique_ptr<aricoder>& dec, int cmp );
+static void pjg_decode_generic(const std::unique_ptr<aricoder>& dec, unsigned char** data, int* len );
+static int pjg_decode_bit(const std::unique_ptr<aricoder>& dec);
 
 static void pjg_get_zerosort_scan( unsigned char* sv, int cmp );
-static bool pjg_optimize_header();
-static bool pjg_unoptimize_header();
+static void pjg_optimize_header();
+static void pjg_unoptimize_header();
 
 static void pjg_aavrg_prepare( unsigned short** abs_coeffs, int* weights, unsigned short* abs_store, int cmp );
 static int pjg_aavrg_context( unsigned short** abs_coeffs, int* weights, int pos, int p_y, int p_x, int r_x );
@@ -3187,65 +3187,66 @@ static bool pack_pjg()
 	if ( disc_meta )
 		if ( !jpg_rebuild_header() ) return false;	
 	// optimize header for compression
-	if ( !pjg_optimize_header() ) return false;	
+	pjg_optimize_header();	
 	// set padbit to 1 if previously unset
 	if ( padbit == -1 )	padbit = 1;
 	
 	// encode JPG header
 	#if !defined(DEV_INFOS)	
-	if ( !pjg_encode_generic( encoder, hdrdata, hdrs ) ) return false;
+	pjg_encode_generic( encoder, hdrdata, hdrs );
 	#else
 	dev_size = str_out->getpos();
 	if ( !pjg_encode_generic( encoder, hdrdata, hdrs ) ) return false;
 	dev_size_hdr += str_out->getpos() - dev_size;
 	#endif
 	// store padbit (padbit can't be retrieved from the header)
-	if ( !pjg_encode_bit( encoder, padbit ) ) return false;	
+	pjg_encode_bit( encoder, padbit );	
 	// also encode one bit to signal false/correct use of RST markers
-	if ( !pjg_encode_bit( encoder, rst_err.empty() ? 0 : 1 ) ) return false;
+	pjg_encode_bit( encoder, rst_err.empty() ? 0 : 1 );
 	// encode # of false set RST markers per scan
-	if ( !rst_err.empty() )
-		if ( !pjg_encode_generic( encoder, rst_err.data(), scnc ) ) return false;
+	if (!rst_err.empty()) {
+		pjg_encode_generic(encoder, rst_err.data(), scnc);
+	}
 	
 	// encode actual components data
 	for ( cmp = 0; cmp < cmpc; cmp++ ) {		
 		#if !defined(DEV_INFOS)
 		// encode frequency scan ('zero-sort-scan')
-		if ( !pjg_encode_zstscan( encoder, cmp ) ) return false;
+		pjg_encode_zstscan( encoder, cmp );
 		// encode zero-distribution-lists for higher (7x7) ACs
-		if ( !pjg_encode_zdst_high( encoder, cmp ) ) return false;
+		pjg_encode_zdst_high( encoder, cmp );
 		// encode coefficients for higher (7x7) ACs
-		if ( !pjg_encode_ac_high( encoder, cmp ) ) return false;
+		pjg_encode_ac_high( encoder, cmp );
 		// encode zero-distribution-lists for lower ACs
-		if ( !pjg_encode_zdst_low( encoder, cmp ) ) return false;
+		pjg_encode_zdst_low( encoder, cmp );
 		// encode coefficients for first row / collumn ACs
-		if ( !pjg_encode_ac_low( encoder, cmp ) ) return false;
+		pjg_encode_ac_low( encoder, cmp );
 		// encode coefficients for DC
-		if ( !pjg_encode_dc( encoder, cmp ) ) return false;		
+		pjg_encode_dc( encoder, cmp );		
 		#else
 		dev_size = str_out->getpos();
 		// encode frequency scan ('zero-sort-scan')
-		if ( !pjg_encode_zstscan( encoder, cmp ) ) return false;		
+		pjg_encode_zstscan( encoder, cmp );		
 		dev_size_zsr[ cmp ] += str_out->getpos() - dev_size;
 		dev_size = str_out->getpos();
 		// encode zero-distribution-lists for higher (7x7) ACs
-		if ( !pjg_encode_zdst_high( encoder, cmp ) ) return false;
+		pjg_encode_zdst_high( encoder, cmp );
 		dev_size_zdh[ cmp ] += str_out->getpos() - dev_size;
 		dev_size = str_out->getpos();
 		// encode coefficients for higher (7x7) ACs
-		if ( !pjg_encode_ac_high( encoder, cmp ) ) return false;
+		pjg_encode_ac_high( encoder, cmp );
 		dev_size_ach[ cmp ] += str_out->getpos() - dev_size;
 		dev_size = str_out->getpos();
 		// encode zero-distribution-lists for lower ACs
-		if ( !pjg_encode_zdst_low( encoder, cmp ) ) return false;
+		pjg_encode_zdst_low( encoder, cmp );
 		dev_size_zdl[ cmp ] += str_out->getpos() - dev_size;
 		dev_size = str_out->getpos();
 		// encode coefficients for first row / collumn ACs
-		if ( !pjg_encode_ac_low( encoder, cmp ) ) return false;
+		pjg_encode_ac_low( encoder, cmp );
 		dev_size_acl[ cmp ] += str_out->getpos() - dev_size;
 		dev_size = str_out->getpos();
 		// encode coefficients for DC
-		if ( !pjg_encode_dc( encoder, cmp ) ) return false;
+		pjg_encode_dc( encoder, cmp );
 		dev_size_dc[ cmp ] += str_out->getpos() - dev_size;
 		dev_size_cmp[ cmp ] = 
 			dev_size_zsr[ cmp ] + dev_size_zdh[ cmp ] +	dev_size_zdl[ cmp ] +
@@ -3254,10 +3255,11 @@ static bool pack_pjg()
 	}
 	
 	// encode checkbit for garbage (0 if no garbage, 1 if garbage has to be coded)
-	if ( !pjg_encode_bit( encoder, ( grbs > 0 ) ? 1 : 0 ) ) return false;
+	pjg_encode_bit( encoder, ( grbs > 0 ) ? 1 : 0 );
 	// encode garbage data only if needed
-	if ( grbs > 0 )
-		if ( !pjg_encode_generic( encoder, grbgdata, grbs ) ) return false;
+	if (grbs > 0) {
+		pjg_encode_generic(encoder, grbgdata, grbs);
+	}
 	
 	// finalize arithmetic compression
 	//delete( encoder );
@@ -3320,19 +3322,20 @@ static bool unpack_pjg()
 	auto decoder = std::make_unique<aricoder>( str_in, 0 );
 	
 	// decode JPG header
-	if ( !pjg_decode_generic( decoder, &hdrdata, &hdrs ) ) return false;
+	pjg_decode_generic( decoder, &hdrdata, &hdrs );
 	// retrieve padbit from stream
-	if ( !pjg_decode_bit( decoder, &cb ) ) return false; padbit = cb;
+	cb = pjg_decode_bit(decoder);
+	padbit = cb;
 	// decode one bit that signals false /correct use of RST markers
-	if ( !pjg_decode_bit( decoder, &cb ) ) return false;
+	cb = pjg_decode_bit(decoder);
 	// decode # of false set RST markers per scan only if available
 	if (cb == 1) {
 		auto data = rst_err.data();
-		if (!pjg_decode_generic(decoder, &data, nullptr)) return false;
+		pjg_decode_generic(decoder, &data, nullptr);
 	}
 	
 	// undo header optimizations
-	if ( !pjg_unoptimize_header() )	return false;	
+	pjg_unoptimize_header();	
 	// discard meta information from header if option set
 	if ( disc_meta )
 		if ( !jpg_rebuild_header() ) return false;
@@ -3342,25 +3345,28 @@ static bool unpack_pjg()
 	// decode actual components data
 	for ( cmp = 0; cmp < cmpc; cmp++ ) {		
 		// decode frequency scan ('zero-sort-scan')
-		if ( !pjg_decode_zstscan( decoder, cmp ) ) return false;		
+		pjg_decode_zstscan(decoder, cmp);
 		// decode zero-distribution-lists for higher (7x7) ACs
-		if ( !pjg_decode_zdst_high( decoder, cmp ) ) return false;
+		pjg_decode_zdst_high( decoder, cmp );
 		// decode coefficients for higher (7x7) ACs
-		if ( !pjg_decode_ac_high( decoder, cmp ) ) return false;
+		pjg_decode_ac_high( decoder, cmp );
 		// decode zero-distribution-lists for lower ACs
-		if ( !pjg_decode_zdst_low( decoder, cmp ) ) return false;
+		pjg_decode_zdst_low( decoder, cmp );
 		// decode coefficients for first row / collumn ACs
-		if ( !pjg_decode_ac_low( decoder, cmp ) ) return false;	
+		pjg_decode_ac_low( decoder, cmp );	
 		// decode coefficients for DC
-		if ( !pjg_decode_dc( decoder, cmp ) ) return false;	
+		pjg_decode_dc( decoder, cmp );	
 	}
 	
 	// retrieve checkbit for garbage (0 if no garbage, 1 if garbage has to be coded)
-	if ( !pjg_decode_bit( decoder, &cb ) ) return false;
+	cb = pjg_decode_bit( decoder);
 	
 	// decode garbage data only if available
-	if ( cb == 0 ) grbs = 0;
-	else if ( !pjg_decode_generic( decoder, &grbgdata, &grbs ) ) return false;
+	if (cb == 0) {
+		grbs = 0;
+	} else {
+		pjg_decode_generic(decoder, &grbgdata, &grbs);
+	}
 	
 	// finalize arithmetic compression
 	//delete( decoder );
@@ -4556,7 +4562,7 @@ static void jpg_build_huffcodes( unsigned char *clen, unsigned char *cval,	huffC
 /* -----------------------------------------------
 	encodes frequency scanorder to pjg
 	----------------------------------------------- */
-static bool pjg_encode_zstscan(const std::unique_ptr<aricoder>& enc, int cmp )
+static void pjg_encode_zstscan(const std::unique_ptr<aricoder>& enc, int cmp )
 {	
 	unsigned char freqlist[ 64 ];
 	int tpos; // true position
@@ -4610,16 +4616,13 @@ static bool pjg_encode_zstscan(const std::unique_ptr<aricoder>& enc, int cmp )
 	
 	// set zero sort scan as freqscan
 	freqscan[ cmp ] = zsrtscan[ cmp ];
-	
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	encodes # of non zeroes to pjg (high)
 	----------------------------------------------- */	
-static bool pjg_encode_zdst_high(const std::unique_ptr<aricoder>&enc, int cmp )
+static void pjg_encode_zdst_high(const std::unique_ptr<aricoder>&enc, int cmp )
 {	
 	unsigned char* zdstls;
 	int dpos;
@@ -4645,15 +4648,13 @@ static bool pjg_encode_zdst_high(const std::unique_ptr<aricoder>&enc, int cmp )
 		// encode symbol
 		encode_ari( enc, model, zdstls[ dpos ] );
 	}
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	encodes # of non zeroes to pjg (low)
 	----------------------------------------------- */	
-static bool pjg_encode_zdst_low(const std::unique_ptr<aricoder>& enc, int cmp )
+static void pjg_encode_zdst_low(const std::unique_ptr<aricoder>& enc, int cmp )
 {	
 	unsigned char* zdstls_x;
 	unsigned char* zdstls_y;
@@ -4686,15 +4687,13 @@ static bool pjg_encode_zdst_low(const std::unique_ptr<aricoder>& enc, int cmp )
 		model->shift_context( ctx_eoby[dpos] ); // shift context
 		encode_ari( enc, model, zdstls_y[ dpos ] ); // encode symbol
 	}
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	encodes DC coefficients to pjg
 	----------------------------------------------- */
-static bool pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp )
+static void pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp )
 {
 	unsigned char* segm_tab;
 	
@@ -4789,15 +4788,13 @@ static bool pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp )
 			absv_store[ dpos ] = absv;
 		}
 	}
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	encodes high (7x7) AC coefficients to pjg
 	----------------------------------------------- */
-static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
+static void pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
 {
 	unsigned char* segm_tab;
 	
@@ -4941,15 +4938,13 @@ static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
 		mod_res->flush_model( 1 );
 		mod_sgn->flush_model( 1 );
 	}
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	encodes first row/col AC coefficients to pjg
 	----------------------------------------------- */
-static bool pjg_encode_ac_low(const std::unique_ptr<aricoder>& enc, int cmp )
+static void pjg_encode_ac_low(const std::unique_ptr<aricoder>& enc, int cmp )
 {
 	unsigned char* zdstls; // pointer to row/col # of non-zeroes
 	signed short* coeffs; // pointer to current coefficent data
@@ -5093,15 +5088,13 @@ static bool pjg_encode_ac_low(const std::unique_ptr<aricoder>& enc, int cmp )
 		mod_top->flush_model( 1 );
 		mod_sgn->flush_model( 1 );
 	}
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	encodes a stream of generic (8bit) data to pjg
 	----------------------------------------------- */
-static bool pjg_encode_generic(const std::unique_ptr<aricoder>& enc, unsigned char* data, int len )
+static void pjg_encode_generic(const std::unique_ptr<aricoder>& enc, unsigned char* data, int len )
 {
 	// arithmetic encode data
 	auto model = std::make_unique<model_s>( 256 + 1, 256, 1 );
@@ -5112,28 +5105,24 @@ static bool pjg_encode_generic(const std::unique_ptr<aricoder>& enc, unsigned ch
 	}
 	// encode end-of-data symbol (256)
 	encode_ari( enc, model, 256 );
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	encodes one bit to pjg
 	----------------------------------------------- */
-static bool pjg_encode_bit(const std::unique_ptr<aricoder>& enc, unsigned char bit )
+static void pjg_encode_bit(const std::unique_ptr<aricoder>& enc, unsigned char bit )
 {
 	// encode one bit
 	auto model = std::make_unique<model_b>( 1, -1 );
 	encode_ari( enc, model, bit );
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	encodes frequency scanorder to pjg
 	----------------------------------------------- */
-static bool pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp )
+static void pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp )
 {		
 	int tpos; // true position
 	int cpos; // coded position	
@@ -5180,16 +5169,13 @@ static bool pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp )
 	
 	// set zero sort scan as freqscan
 	freqscan[ cmp ] = zsrtscan[ cmp ];
-	
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	decodes # of non zeroes from pjg (high)
 	----------------------------------------------- */
-static bool pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp )
+static void pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp )
 {		
 	// init model, constants
 	auto model = std::make_unique<model_s>(49 + 1, 25 + 1, 1);
@@ -5211,15 +5197,13 @@ static bool pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp )
 		// decode symbol
 		zdstls[ dpos ] = decode_ari( dec, model );
 	}
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	decodes # of non zeroes from pjg (low)
 	----------------------------------------------- */	
-static bool pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp )
+static void pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp )
 {
 	// init model, constants
 	auto model = std::make_unique<model_s>(8, 8, 2);
@@ -5242,15 +5226,13 @@ static bool pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp )
 		shift_model(model, ( ctx_zdst[dpos] + 3 ) / 7, ctx_eoby[dpos]); // shift 2 contexts
 		zdstls_y[ dpos ] = decode_ari( dec, model ); // decode symbol
 	}
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	decodes DC coefficients from pjg
 	----------------------------------------------- */
-static bool pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp )
+static void pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp )
 {			
 	// decide segmentation setting
 	unsigned char* segm_tab = segm_tables[ segm_cnt[ cmp ] - 1 ];
@@ -5322,15 +5304,13 @@ static bool pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp )
 			absv_store[ dpos ] = absv;
 		}
 	}
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	decodes high (7x7) AC coefficients to pjg
 	----------------------------------------------- */
-static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
+static void pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
 {
 	unsigned char* segm_tab;
 	
@@ -5473,15 +5453,13 @@ static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
 		mod_res->flush_model( 1 );
 		mod_sgn->flush_model( 1 );
 	}
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	decodes high (7x7) AC coefficients to pjg
 	----------------------------------------------- */
-static bool pjg_decode_ac_low(const std::unique_ptr<aricoder>& dec, int cmp )
+static void pjg_decode_ac_low(const std::unique_ptr<aricoder>& dec, int cmp )
 {	
 	unsigned char* zdstls; // pointer to row/col # of non-zeroes
 	signed short* coeffs; // pointer to current coefficent data
@@ -5623,25 +5601,21 @@ static bool pjg_decode_ac_low(const std::unique_ptr<aricoder>& dec, int cmp )
 		mod_top->flush_model( 1 );
 		mod_sgn->flush_model( 1 );
 	}
-		
-	return true;
 }
 
 
 /* -----------------------------------------------
 	deodes a stream of generic (8bit) data from pjg
 	----------------------------------------------- */
-static bool pjg_decode_generic(const std::unique_ptr<aricoder>& dec, unsigned char** data, int* len )
-{
-	int c;
-	
+static void pjg_decode_generic(const std::unique_ptr<aricoder>& dec, unsigned char** data, int* len )
+{	
 	// start byte writer
 	auto bwrt = std::make_unique<abytewriter>( 1024 );
 	
 	// decode header, ending with 256 symbol
 	auto model = std::make_unique<model_s>( 256 + 1, 256, 1 );
 	while ( true ) {
-		c = decode_ari( dec, model );
+		const int c = decode_ari( dec, model );
 		if ( c == 256 ) break;
 		bwrt->write( (unsigned char) c );
 		model->shift_context( c );
@@ -5651,26 +5625,21 @@ static bool pjg_decode_generic(const std::unique_ptr<aricoder>& dec, unsigned ch
 	if ( bwrt->error() ) {
 		sprintf( errormessage, MEM_ERRMSG );
 		errorlevel = 2;
-		return false;
+		return;
 	}
 	
 	// get data/length and close byte writer
 	(*data) = bwrt->getptr();
 	if ( len != nullptr ) (*len) = bwrt->getpos();
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	decodes one bit from pjg
 	----------------------------------------------- */
-static bool pjg_decode_bit(const std::unique_ptr<aricoder>& dec, unsigned char* bit )
-{
+static int pjg_decode_bit(const std::unique_ptr<aricoder>& dec) {
 	auto model = std::make_unique<model_b>( 1, -1 );
-	(*bit) = decode_ari( dec, model );
-	
-	return true;
+	return decode_ari( dec, model );
 }
 
 
@@ -5721,7 +5690,7 @@ static void pjg_get_zerosort_scan( unsigned char* sv, int cmp )
 /* -----------------------------------------------
 	optimizes JFIF header for compression
 	----------------------------------------------- */
-static bool pjg_optimize_header()
+static void pjg_optimize_header()
 {
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
@@ -5791,16 +5760,13 @@ static bool pjg_optimize_header()
 			hpos += len;
 		}		
 	}
-	
-	
-	return true;
 }
 
 
 /* -----------------------------------------------
 	undoes the header optimizations
 	----------------------------------------------- */
-static bool pjg_unoptimize_header()
+static void pjg_unoptimize_header()
 {
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
@@ -5860,9 +5826,6 @@ static bool pjg_unoptimize_header()
 			hpos += len;
 		}		
 	}
-	
-	
-	return true;
 }
 
 
