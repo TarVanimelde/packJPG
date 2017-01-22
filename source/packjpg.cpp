@@ -292,9 +292,6 @@ packJPG by Matthias Stirner, 01/2016
 	#include "packjpglib.h"
 #endif
 
-#define INIT_MODEL_S(a,b,c) new model_s( a, b, c, 255 )
-#define INIT_MODEL_B(a,b)   new model_b( a, b, 255 )
-
 // #define USE_PLOCOI // uncomment to use loco-i predictor instead of 1DDCT predictor
 // #define DEV_BUILD // uncomment to include developer functions
 // #define DEV_INFOS // uncomment to include developer information
@@ -3790,16 +3787,13 @@ static bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 	JFIF header rebuilding routine
 	----------------------------------------------- */
 static bool jpg_rebuild_header()
-{	
-	abytewriter* hdrw; // new header writer
-	
+{		
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
 	unsigned int   hpos = 0; // position in header	
 	
-	
 	// start headerwriter
-	hdrw = new abytewriter( 4096 );
+	auto hdrw = std::make_unique<abytewriter>( 4096 ); // New header writer.
 	
 	// header parser loop
 	while ( ( int ) hpos < hdrs ) {
@@ -3817,9 +3811,7 @@ static bool jpg_rebuild_header()
 	// replace current header with the new one
 	free( hdrdata );
 	hdrdata = hdrw->getptr();
-	hdrs    = hdrw->getpos();
-	delete( hdrw );
-	
+	hdrs    = hdrw->getpos();	
 	
 	return true;
 }
@@ -4567,9 +4559,7 @@ static void jpg_build_huffcodes( unsigned char *clen, unsigned char *cval,	huffC
 	encodes frequency scanorder to pjg
 	----------------------------------------------- */
 static bool pjg_encode_zstscan(const std::unique_ptr<aricoder>& enc, int cmp )
-{
-	model_s* model;
-	
+{	
 	unsigned char freqlist[ 64 ];
 	int tpos; // true position
 	int cpos; // coded position
@@ -4584,7 +4574,7 @@ static bool pjg_encode_zstscan(const std::unique_ptr<aricoder>& enc, int cmp )
 		freqlist[ i ] = stdscan[ i ];
 		
 	// init model
-	model = INIT_MODEL_S( 64, 64, 1 );
+	auto model = std::make_unique<model_s>( 64, 64, 1 );
 	
 	// encode scanorder
 	for ( i = 1; i < 64; i++ )
@@ -4620,9 +4610,6 @@ static bool pjg_encode_zstscan(const std::unique_ptr<aricoder>& enc, int cmp )
 		model->shift_context( cpos );		
 	}
 	
-	// delete model
-	delete( model );
-	
 	// set zero sort scan as freqscan
 	freqscan[ cmp ] = zsrtscan[ cmp ];
 	
@@ -4635,9 +4622,7 @@ static bool pjg_encode_zstscan(const std::unique_ptr<aricoder>& enc, int cmp )
 	encodes # of non zeroes to pjg (high)
 	----------------------------------------------- */	
 static bool pjg_encode_zdst_high(const std::unique_ptr<aricoder>&enc, int cmp )
-{
-	model_s* model;
-	
+{	
 	unsigned char* zdstls;
 	int dpos;
 	int a, b;
@@ -4646,7 +4631,7 @@ static bool pjg_encode_zdst_high(const std::unique_ptr<aricoder>&enc, int cmp )
 	
 	
 	// init model, constants
-	model = INIT_MODEL_S( 49 + 1, 25 + 1, 1 );
+	auto model = std::make_unique<model_s>( 49 + 1, 25 + 1, 1 );
 	zdstls = zdstdata[ cmp ];
 	w = cmpnfo[cmp].bch;
 	bc = cmpnfo[cmp].bc;
@@ -4663,10 +4648,6 @@ static bool pjg_encode_zdst_high(const std::unique_ptr<aricoder>&enc, int cmp )
 		encode_ari( enc, model, zdstls[ dpos ] );
 	}
 	
-	// clean up
-	delete( model );
-	
-	
 	return true;
 }
 
@@ -4675,9 +4656,7 @@ static bool pjg_encode_zdst_high(const std::unique_ptr<aricoder>&enc, int cmp )
 	encodes # of non zeroes to pjg (low)
 	----------------------------------------------- */	
 static bool pjg_encode_zdst_low(const std::unique_ptr<aricoder>& enc, int cmp )
-{
-	model_s* model;
-	
+{	
 	unsigned char* zdstls_x;
 	unsigned char* zdstls_y;
 	unsigned char* ctx_zdst;
@@ -4689,7 +4668,7 @@ static bool pjg_encode_zdst_low(const std::unique_ptr<aricoder>& enc, int cmp )
 	
 	
 	// init model, constants
-	model = INIT_MODEL_S( 8, 8, 2 );
+	auto model = std::make_unique<model_s>( 8, 8, 2 );
 	zdstls_x = zdstxlow[ cmp ];
 	zdstls_y = zdstylow[ cmp ];
 	ctx_eobx = eobxhigh[ cmp ];
@@ -4710,10 +4689,6 @@ static bool pjg_encode_zdst_low(const std::unique_ptr<aricoder>& enc, int cmp )
 		encode_ari( enc, model, zdstls_y[ dpos ] ); // encode symbol
 	}
 	
-	// clean up
-	delete( model );
-	
-	
 	return true;
 }
 
@@ -4724,10 +4699,6 @@ static bool pjg_encode_zdst_low(const std::unique_ptr<aricoder>& enc, int cmp )
 static bool pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp )
 {
 	unsigned char* segm_tab;
-	
-	model_s* mod_len;
-	model_b* mod_sgn;
-	model_b* mod_res;
 	
 	unsigned char* zdstls; // pointer to zero distribution list
 	signed short* coeffs; // pointer to current coefficent data
@@ -4760,9 +4731,9 @@ static bool pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp )
 	max_len = BITLEN1024P( max_val );
 	
 	// init models for bitlenghts and -patterns	
-	mod_len = INIT_MODEL_S( max_len + 1, ( segm_cnt[cmp] > max_len ) ? segm_cnt[cmp] : max_len + 1, 2 );
-	mod_res = INIT_MODEL_B( ( segm_cnt[cmp] < 16 ) ? 1 << 4 : segm_cnt[cmp], 2 );
-	mod_sgn = INIT_MODEL_B( 1, 0 );
+	auto mod_len = std::make_unique<model_s>( max_len + 1, ( segm_cnt[cmp] > max_len ) ? segm_cnt[cmp] : max_len + 1, 2 );
+	auto mod_res = std::make_unique<model_b>( ( segm_cnt[cmp] < 16 ) ? 1 << 4 : segm_cnt[cmp], 2 );
+	auto mod_sgn = std::make_unique<model_b>( 1, 0 );
 	
 	// set width/height of each band
 	bc = cmpnfo[cmp].bc;
@@ -4829,10 +4800,6 @@ static bool pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp )
 	
 	// free memory / clear models
 	free( absv_store );
-	delete ( mod_len );
-	delete ( mod_res );
-	delete ( mod_sgn );
-	
 	
 	return true;
 }
@@ -4844,10 +4811,6 @@ static bool pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp )
 static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
 {
 	unsigned char* segm_tab;
-	
-	model_s* mod_len;
-	model_b* mod_sgn;
-	model_b* mod_res;
 	
 	unsigned char* zdstls; // pointer to zero distribution list
 	unsigned char* eob_x; // pointer to x eobs
@@ -4885,9 +4848,9 @@ static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
 	segm_tab = segm_tables[ segm_cnt[ cmp ] - 1 ];
 	
 	// init models for bitlenghts and -patterns
-	mod_len = INIT_MODEL_S( 11, ( segm_cnt[cmp] > 11 ) ? segm_cnt[cmp] : 11, 2 );
-	mod_res = INIT_MODEL_B( ( segm_cnt[cmp] < 16 ) ? 1 << 4 : segm_cnt[cmp], 2 );
-	mod_sgn = INIT_MODEL_B( 9, 1 );
+	auto mod_len = std::make_unique<model_s>( 11, ( segm_cnt[cmp] > 11 ) ? segm_cnt[cmp] : 11, 2 );
+	auto mod_res = std::make_unique<model_b>( ( segm_cnt[cmp] < 16 ) ? 1 << 4 : segm_cnt[cmp], 2 );
+	auto mod_sgn = std::make_unique<model_b>( 9, 1 );
 	
 	// set width/height of each band
 	bc = cmpnfo[cmp].bc;
@@ -5013,10 +4976,6 @@ static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
 	free( absv_store );
 	free( sgn_store );
 	free( zdstls );
-	delete ( mod_len );
-	delete ( mod_res );
-	delete ( mod_sgn );
-	
 	
 	return true;
 }
@@ -5027,11 +4986,6 @@ static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
 	----------------------------------------------- */
 static bool pjg_encode_ac_low(const std::unique_ptr<aricoder>& enc, int cmp )
 {
-	model_s* mod_len;
-	model_b* mod_sgn;
-	model_b* mod_res;
-	model_b* mod_top;
-	
 	unsigned char* zdstls; // pointer to row/col # of non-zeroes
 	signed short* coeffs; // pointer to current coefficent data
 	
@@ -5062,10 +5016,10 @@ static bool pjg_encode_ac_low(const std::unique_ptr<aricoder>& enc, int cmp )
 	
 	
 	// init models for bitlenghts and -patterns
-	mod_len = INIT_MODEL_S( 11, ( segm_cnt[cmp] > 11 ) ? segm_cnt[cmp] : 11, 2 );
-	mod_res = INIT_MODEL_B( 1 << 4, 2 );
-	mod_top = INIT_MODEL_B( ( nois_trs[cmp] > 4 ) ? 1 << nois_trs[cmp] : 1 << 4, 3 );
-	mod_sgn = INIT_MODEL_B( 11, 1 );
+	auto mod_len = std::make_unique<model_s>( 11, ( segm_cnt[cmp] > 11 ) ? segm_cnt[cmp] : 11, 2 );
+	auto mod_res = std::make_unique<model_b>( 1 << 4, 2 );
+	auto mod_top = std::make_unique<model_b>( ( nois_trs[cmp] > 4 ) ? 1 << nois_trs[cmp] : 1 << 4, 3 );
+	auto mod_sgn = std::make_unique<model_b>( 11, 1 );
 	
 	// set width/height of each band
 	bc = cmpnfo[cmp].bc;
@@ -5175,13 +5129,6 @@ static bool pjg_encode_ac_low(const std::unique_ptr<aricoder>& enc, int cmp )
 		mod_sgn->flush_model( 1 );
 	}
 	
-	// free memory / clear models
-	delete ( mod_len );
-	delete ( mod_res );
-	delete ( mod_top );
-	delete ( mod_sgn );
-	
-	
 	return true;
 }
 
@@ -5191,21 +5138,15 @@ static bool pjg_encode_ac_low(const std::unique_ptr<aricoder>& enc, int cmp )
 	----------------------------------------------- */
 static bool pjg_encode_generic(const std::unique_ptr<aricoder>& enc, unsigned char* data, int len )
 {
-	model_s* model;
-	int i;
-	
-	
 	// arithmetic encode data
-	model = INIT_MODEL_S( 256 + 1, 256, 1 );
-	for ( i = 0; i < len; i++ )
+	auto model = std::make_unique<model_s>( 256 + 1, 256, 1 );
+	for (int i = 0; i < len; i++ )
 	{
 		encode_ari( enc, model, data[ i ] );
 		model->shift_context( data[ i ] );
 	}
 	// encode end-of-data symbol (256)
 	encode_ari( enc, model, 256 );
-	delete( model );
-	
 	
 	return true;
 }
@@ -5216,14 +5157,9 @@ static bool pjg_encode_generic(const std::unique_ptr<aricoder>& enc, unsigned ch
 	----------------------------------------------- */
 static bool pjg_encode_bit(const std::unique_ptr<aricoder>& enc, unsigned char bit )
 {
-	model_b* model;
-	
-	
 	// encode one bit
-	model = INIT_MODEL_B( 1, -1 );
+	auto model = std::make_unique<model_b>( 1, -1 );
 	encode_ari( enc, model, bit );
-	delete( model );
-	
 	
 	return true;
 }
@@ -5233,9 +5169,7 @@ static bool pjg_encode_bit(const std::unique_ptr<aricoder>& enc, unsigned char b
 	encodes frequency scanorder to pjg
 	----------------------------------------------- */
 static bool pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp )
-{	
-	model_s* model;;
-	
+{		
 	unsigned char freqlist[ 64 ];
 	int tpos; // true position
 	int cpos; // coded position
@@ -5250,7 +5184,7 @@ static bool pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp )
 		freqlist[ i ] = stdscan[ i ];
 		
 	// init model
-	model = INIT_MODEL_S( 64, 64, 1 );
+	auto model = std::make_unique<model_s>( 64, 64, 1 );
 	
 	// encode scanorder
 	for ( i = 1; i < 64; i++ )
@@ -5282,10 +5216,7 @@ static bool pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp )
 		zsrtscan[ cmp ][ i ] = freqlist[ tpos ];
 		// remove from list
 		freqlist[ tpos ] = 0;
-	}
-	
-	// delete model
-	delete( model  );		
+	}		
 	
 	// set zero sort scan as freqscan
 	freqscan[ cmp ] = zsrtscan[ cmp ];
@@ -5299,9 +5230,7 @@ static bool pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp )
 	decodes # of non zeroes from pjg (high)
 	----------------------------------------------- */
 static bool pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp )
-{
-	model_s* model;
-	
+{	
 	unsigned char* zdstls;
 	int dpos;
 	int a, b;
@@ -5310,7 +5239,7 @@ static bool pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp )
 	
 	
 	// init model, constants
-	model = INIT_MODEL_S( 49 + 1, 25 + 1, 1 );
+	auto model = std::make_unique<model_s>( 49 + 1, 25 + 1, 1 );
 	zdstls = zdstdata[ cmp ];
 	w = cmpnfo[cmp].bch;
 	bc = cmpnfo[cmp].bc;
@@ -5327,10 +5256,6 @@ static bool pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp )
 		zdstls[ dpos ] = decode_ari( dec, model );
 	}
 	
-	// clean up
-	delete( model );
-	
-	
 	return true;
 }
 
@@ -5339,9 +5264,7 @@ static bool pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp )
 	decodes # of non zeroes from pjg (low)
 	----------------------------------------------- */	
 static bool pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp )
-{
-	model_s* model;
-	
+{	
 	unsigned char* zdstls_x;
 	unsigned char* zdstls_y;
 	unsigned char* ctx_zdst;
@@ -5353,7 +5276,7 @@ static bool pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp )
 	
 	
 	// init model, constants
-	model = INIT_MODEL_S( 8, 8, 2 );
+	auto model = std::make_unique<model_s>( 8, 8, 2 );
 	zdstls_x = zdstxlow[ cmp ];
 	zdstls_y = zdstylow[ cmp ];
 	ctx_eobx = eobxhigh[ cmp ];
@@ -5374,10 +5297,6 @@ static bool pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp )
 		zdstls_y[ dpos ] = decode_ari( dec, model ); // decode symbol
 	}
 	
-	// clean up
-	delete( model );
-	
-	
 	return true;
 }
 
@@ -5388,10 +5307,6 @@ static bool pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp )
 static bool pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp )
 {
 	unsigned char* segm_tab;
-	
-	model_s* mod_len;
-	model_b* mod_sgn;
-	model_b* mod_res;
 	
 	unsigned char* zdstls; // pointer to zero distribution list
 	signed short* coeffs; // pointer to current coefficent data
@@ -5424,9 +5339,9 @@ static bool pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp )
 	max_len = BITLEN1024P( max_val );
 	
 	// init models for bitlenghts and -patterns
-	mod_len = INIT_MODEL_S( max_len + 1, ( segm_cnt[cmp] > max_len ) ? segm_cnt[cmp] : max_len + 1, 2 );
-	mod_res = INIT_MODEL_B( ( segm_cnt[cmp] < 16 ) ? 1 << 4 : segm_cnt[cmp], 2 );
-	mod_sgn = INIT_MODEL_B( 1, 0 );
+	auto mod_len = std::make_unique<model_s>( max_len + 1, ( segm_cnt[cmp] > max_len ) ? segm_cnt[cmp] : max_len + 1, 2 );
+	auto mod_res = std::make_unique<model_b>( ( segm_cnt[cmp] < 16 ) ? 1 << 4 : segm_cnt[cmp], 2 );
+	auto mod_sgn = std::make_unique<model_b>( 1, 0 );
 	
 	// set width/height of each band
 	bc = cmpnfo[cmp].bc;
@@ -5491,13 +5406,6 @@ static bool pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp )
 		}
 	}
 	
-	// free memory / clear models
-	free( absv_store );
-	delete ( mod_len );
-	delete ( mod_res );
-	delete ( mod_sgn );
-	
-	
 	return true;
 }
 
@@ -5508,10 +5416,6 @@ static bool pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp )
 static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
 {
 	unsigned char* segm_tab;
-	
-	model_s* mod_len;
-	model_b* mod_sgn;
-	model_b* mod_res;
 	
 	unsigned char* zdstls; // pointer to zero distribution list
 	unsigned char* eob_x; // pointer to x eobs
@@ -5549,9 +5453,9 @@ static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
 	segm_tab = segm_tables[ segm_cnt[ cmp ] - 1 ];
 	
 	// init models for bitlenghts and -patterns
-	mod_len = INIT_MODEL_S( 11, ( segm_cnt[cmp] > 11 ) ? segm_cnt[cmp] : 11, 2 );
-	mod_res = INIT_MODEL_B( ( segm_cnt[cmp] < 16 ) ? 1 << 4 : segm_cnt[cmp], 2 );
-	mod_sgn = INIT_MODEL_B( 9, 1 );
+	auto mod_len = std::make_unique<model_s>( 11, ( segm_cnt[cmp] > 11 ) ? segm_cnt[cmp] : 11, 2 );
+	auto mod_res = std::make_unique<model_b>( ( segm_cnt[cmp] < 16 ) ? 1 << 4 : segm_cnt[cmp], 2 );
+	auto mod_sgn = std::make_unique<model_b>( 9, 1 );
 	
 	// set width/height of each band
 	bc = cmpnfo[cmp].bc;
@@ -5677,10 +5581,6 @@ static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
 	free( absv_store );
 	free( sgn_store );
 	free( zdstls );
-	delete ( mod_len );
-	delete ( mod_res );
-	delete ( mod_sgn );
-	
 	
 	return true;
 }
@@ -5690,12 +5590,7 @@ static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
 	decodes high (7x7) AC coefficients to pjg
 	----------------------------------------------- */
 static bool pjg_decode_ac_low(const std::unique_ptr<aricoder>& dec, int cmp )
-{
-	model_s* mod_len;
-	model_b* mod_sgn;
-	model_b* mod_res;
-	model_b* mod_top;
-	
+{	
 	unsigned char* zdstls; // pointer to row/col # of non-zeroes
 	signed short* coeffs; // pointer to current coefficent data
 	
@@ -5726,10 +5621,10 @@ static bool pjg_decode_ac_low(const std::unique_ptr<aricoder>& dec, int cmp )
 	
 	
 	// init models for bitlenghts and -patterns
-	mod_len = INIT_MODEL_S( 11, ( segm_cnt[cmp] > 11 ) ? segm_cnt[cmp] : 11, 2 );
-	mod_res = INIT_MODEL_B( 1 << 4, 2 );
-	mod_top = INIT_MODEL_B( ( nois_trs[cmp] > 4 ) ? 1 << nois_trs[cmp] : 1 << 4, 3 );
-	mod_sgn = INIT_MODEL_B( 11, 1 );
+	auto mod_len = std::make_unique<model_s>( 11, ( segm_cnt[cmp] > 11 ) ? segm_cnt[cmp] : 11, 2 );
+	auto mod_res = std::make_unique<model_b>( 1 << 4, 2 );
+	auto mod_top = std::make_unique<model_b>( ( nois_trs[cmp] > 4 ) ? 1 << nois_trs[cmp] : 1 << 4, 3 );
+	auto mod_sgn = std::make_unique<model_b>( 11, 1 );
 	
 	// set width/height of each band
 	bc = cmpnfo[cmp].bc;
@@ -5836,14 +5731,7 @@ static bool pjg_decode_ac_low(const std::unique_ptr<aricoder>& dec, int cmp )
 		mod_top->flush_model( 1 );
 		mod_sgn->flush_model( 1 );
 	}
-	
-	// free memory / clear models
-	delete ( mod_len );
-	delete ( mod_res );
-	delete ( mod_top );
-	delete ( mod_sgn );
-	
-	
+		
 	return true;
 }
 
@@ -5853,27 +5741,22 @@ static bool pjg_decode_ac_low(const std::unique_ptr<aricoder>& dec, int cmp )
 	----------------------------------------------- */
 static bool pjg_decode_generic(const std::unique_ptr<aricoder>& dec, unsigned char** data, int* len )
 {
-	abytewriter* bwrt;
-	model_s* model;
 	int c;
 	
-	
 	// start byte writer
-	bwrt = new abytewriter( 1024 );
+	auto bwrt = std::make_unique<abytewriter>( 1024 );
 	
 	// decode header, ending with 256 symbol
-	model = INIT_MODEL_S( 256 + 1, 256, 1 );
+	auto model = std::make_unique<model_s>( 256 + 1, 256, 1 );
 	while ( true ) {
 		c = decode_ari( dec, model );
 		if ( c == 256 ) break;
 		bwrt->write( (unsigned char) c );
 		model->shift_context( c );
 	}
-	delete( model );
 	
 	// check for out of memory
 	if ( bwrt->error() ) {
-		delete bwrt;
 		sprintf( errormessage, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
@@ -5882,8 +5765,6 @@ static bool pjg_decode_generic(const std::unique_ptr<aricoder>& dec, unsigned ch
 	// get data/length and close byte writer
 	(*data) = bwrt->getptr();
 	if ( len != nullptr ) (*len) = bwrt->getpos();
-	delete bwrt;
-	
 	
 	return true;
 }
@@ -5894,13 +5775,8 @@ static bool pjg_decode_generic(const std::unique_ptr<aricoder>& dec, unsigned ch
 	----------------------------------------------- */
 static bool pjg_decode_bit(const std::unique_ptr<aricoder>& dec, unsigned char* bit )
 {
-	model_b* model;
-	
-	
-	model = INIT_MODEL_B( 1, -1 );
+	auto model = std::make_unique<model_b>( 1, -1 );
 	(*bit) = decode_ari( dec, model );
-	delete( model );
-	
 	
 	return true;
 }
