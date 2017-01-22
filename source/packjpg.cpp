@@ -5194,23 +5194,19 @@ static bool pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp )
 	decodes # of non zeroes from pjg (high)
 	----------------------------------------------- */
 static bool pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp )
-{	
-	unsigned char* zdstls;
-	int dpos;
-	int a, b;
-	int bc;
-	int w;
-	
-	
+{		
 	// init model, constants
-	auto model = std::make_unique<model_s>( 49 + 1, 25 + 1, 1 );
-	zdstls = zdstdata[ cmp ];
-	w = cmpnfo[cmp].bch;
-	bc = cmpnfo[cmp].bc;
+	auto model = std::make_unique<model_s>(49 + 1, 25 + 1, 1);
+
+	auto& zdstls = zdstdata[ cmp ];
+
+	const int w = cmpnfo[cmp].bch;
+	const int bc = cmpnfo[cmp].bc;
 	
 	// arithmetic decode zero-distribution-list
-	for ( dpos = 0; dpos < bc; dpos++ )	{			
+	for (int dpos = 0; dpos < bc; dpos++ )	{			
 		// context modelling - use average of above and left as context		
+		int a, b;
 		get_context_nnb( dpos, w, &a, &b );
 		a = ( a >= 0 ) ? zdstls[ a ] : 0;
 		b = ( b >= 0 ) ? zdstls[ b ] : 0;
@@ -5228,36 +5224,26 @@ static bool pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp )
 	decodes # of non zeroes from pjg (low)
 	----------------------------------------------- */	
 static bool pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp )
-{	
-	unsigned char* zdstls_x;
-	unsigned char* zdstls_y;
-	unsigned char* ctx_zdst;
-	unsigned char* ctx_eobx;
-	unsigned char* ctx_eoby;
-	
-	int dpos;
-	int bc;
-	
-	
+{
 	// init model, constants
-	auto model = std::make_unique<model_s>( 8, 8, 2 );
-	zdstls_x = zdstxlow[ cmp ];
-	zdstls_y = zdstylow[ cmp ];
-	ctx_eobx = eobxhigh[ cmp ];
-	ctx_eoby = eobyhigh[ cmp ];
-	ctx_zdst = zdstdata[ cmp ];
-	bc = cmpnfo[cmp].bc;
+	auto model = std::make_unique<model_s>(8, 8, 2);
+
+	auto& zdstls_x = zdstxlow[ cmp ];
+	auto& zdstls_y = zdstylow[ cmp ];
+
+	const auto& ctx_eobx = eobxhigh[ cmp ];
+	const auto& ctx_eoby = eobyhigh[ cmp ];
+	const auto& ctx_zdst = zdstdata[ cmp ];
+	const int bc = cmpnfo[cmp].bc;
 	
 	// arithmetic encode zero-distribution-list (first row)
-	for ( dpos = 0; dpos < bc; dpos++ ) {
-		model->shift_context( ( ctx_zdst[dpos] + 3 ) / 7 ); // shift context
-		model->shift_context( ctx_eobx[dpos] ); // shift context
+	for (int dpos = 0; dpos < bc; dpos++ ) {
+		shift_model(model, ( ctx_zdst[dpos] + 3 ) / 7, ctx_eobx[dpos]); // shift 2 contexts
 		zdstls_x[ dpos ] = decode_ari( dec, model ); // decode symbol
 	}
 	// arithmetic encode zero-distribution-list (first collumn)
-	for ( dpos = 0; dpos < bc; dpos++ ) {
-		model->shift_context( ( ctx_zdst[dpos] + 3 ) / 7 ); // shift context
-		model->shift_context( ctx_eoby[dpos] ); // shift context
+	for (int dpos = 0; dpos < bc; dpos++ ) {
+		shift_model(model, ( ctx_zdst[dpos] + 3 ) / 7, ctx_eoby[dpos]); // shift 2 contexts
 		zdstls_y[ dpos ] = decode_ari( dec, model ); // decode symbol
 	}
 	
@@ -5295,8 +5281,8 @@ static bool pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp )
 	pjg_aavrg_prepare( c_absc, c_weight, absv_store.data(), cmp );
 	
 	// locally store pointer to coefficients and zero distribution list
-	auto coeffs = colldata[ cmp ][ 0 ]; // pointer to current coefficent data
-	const auto zdstls = zdstdata[ cmp ]; // pointer to zero distribution list	
+	auto& coeffs = colldata[ cmp ][ 0 ]; // pointer to current coefficent data
+	const auto& zdstls = zdstdata[ cmp ]; // pointer to zero distribution list	
 	
 	// arithmetic compression loop
 	for (int dpos = 0; dpos < bc; dpos++ )
