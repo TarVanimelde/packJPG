@@ -449,23 +449,23 @@ static void jpg_build_huffcodes( unsigned char *clen, unsigned char *cval,
 	function declarations: pjg-specific
 	----------------------------------------------- */
 	
-static bool pjg_encode_zstscan( aricoder* enc, int cmp );
-static bool pjg_encode_zdst_high( aricoder* enc, int cmp );
-static bool pjg_encode_zdst_low( aricoder* enc, int cmp );
-static bool pjg_encode_dc( aricoder* enc, int cmp );
-static bool pjg_encode_ac_high( aricoder* enc, int cmp );
-static bool pjg_encode_ac_low( aricoder* enc, int cmp );
-static bool pjg_encode_generic( aricoder* enc, unsigned char* data, int len );
-static bool pjg_encode_bit( aricoder* enc, unsigned char bit );
+static bool pjg_encode_zstscan( const std::unique_ptr<aricoder>& enc, int cmp );
+static bool pjg_encode_zdst_high(const std::unique_ptr<aricoder>& enc, int cmp );
+static bool pjg_encode_zdst_low(const std::unique_ptr<aricoder>& enc, int cmp );
+static bool pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp );
+static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp );
+static bool pjg_encode_ac_low(const std::unique_ptr<aricoder>& enc, int cmp );
+static bool pjg_encode_generic(const std::unique_ptr<aricoder>& enc, unsigned char* data, int len );
+static bool pjg_encode_bit(const std::unique_ptr<aricoder>& enc, unsigned char bit );
 
-static bool pjg_decode_zstscan( aricoder* dec, int cmp );
-static bool pjg_decode_zdst_high( aricoder* dec, int cmp );
-static bool pjg_decode_zdst_low( aricoder* dec, int cmp );
-static bool pjg_decode_dc( aricoder* dec, int cmp );
-static bool pjg_decode_ac_high( aricoder* dec, int cmp );
-static bool pjg_decode_ac_low( aricoder* dec, int cmp );
-static bool pjg_decode_generic( aricoder* dec, unsigned char** data, int* len );
-static bool pjg_decode_bit( aricoder* dec, unsigned char* bit );
+static bool pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp );
+static bool pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp );
+static bool pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp );
+static bool pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp );
+static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp );
+static bool pjg_decode_ac_low(const std::unique_ptr<aricoder>& dec, int cmp );
+static bool pjg_decode_generic(const std::unique_ptr<aricoder>& dec, unsigned char** data, int* len );
+static bool pjg_decode_bit(const std::unique_ptr<aricoder>& dec, unsigned char* bit );
 
 static void pjg_get_zerosort_scan( unsigned char* sv, int cmp );
 static bool pjg_optimize_header();
@@ -3162,7 +3162,6 @@ static bool calc_zdst_lists()
 	
 static bool pack_pjg()
 {
-	aricoder* encoder;
 	unsigned char hcode;
 	int cmp;
 	#if defined(DEV_INFOS)
@@ -3187,7 +3186,7 @@ static bool pack_pjg()
 	
 	
 	// init arithmetic compression
-	encoder = new aricoder( str_out, 1 );
+	auto encoder = std::make_unique<aricoder>( str_out, 1 );
 	
 	// discard meta information from header if option set
 	if ( disc_meta )
@@ -3266,7 +3265,7 @@ static bool pack_pjg()
 		if ( !pjg_encode_generic( encoder, grbgdata, grbs ) ) return false;
 	
 	// finalize arithmetic compression
-	delete( encoder );
+	//delete( encoder );
 	
 	
 	// errormessage if write error
@@ -3290,7 +3289,6 @@ static bool pack_pjg()
 	
 static bool unpack_pjg()
 {
-	aricoder* decoder;
 	unsigned char hcode;
 	unsigned char cb;
 	int cmp;
@@ -3324,7 +3322,7 @@ static bool unpack_pjg()
 	
 	
 	// init arithmetic compression
-	decoder = new aricoder( str_in, 0 );
+	auto decoder = std::make_unique<aricoder>( str_in, 0 );
 	
 	// decode JPG header
 	if ( !pjg_decode_generic( decoder, &hdrdata, &hdrs ) ) return false;
@@ -3370,7 +3368,7 @@ static bool unpack_pjg()
 	else if ( !pjg_decode_generic( decoder, &grbgdata, &grbs ) ) return false;
 	
 	// finalize arithmetic compression
-	delete( decoder );
+	//delete( decoder );
 	
 	
 	// get filesize
@@ -4568,7 +4566,7 @@ static void jpg_build_huffcodes( unsigned char *clen, unsigned char *cval,	huffC
 /* -----------------------------------------------
 	encodes frequency scanorder to pjg
 	----------------------------------------------- */
-static bool pjg_encode_zstscan( aricoder* enc, int cmp )
+static bool pjg_encode_zstscan(const std::unique_ptr<aricoder>& enc, int cmp )
 {
 	model_s* model;
 	
@@ -4636,7 +4634,7 @@ static bool pjg_encode_zstscan( aricoder* enc, int cmp )
 /* -----------------------------------------------
 	encodes # of non zeroes to pjg (high)
 	----------------------------------------------- */	
-static bool pjg_encode_zdst_high( aricoder* enc, int cmp )
+static bool pjg_encode_zdst_high(const std::unique_ptr<aricoder>&enc, int cmp )
 {
 	model_s* model;
 	
@@ -4676,7 +4674,7 @@ static bool pjg_encode_zdst_high( aricoder* enc, int cmp )
 /* -----------------------------------------------
 	encodes # of non zeroes to pjg (low)
 	----------------------------------------------- */	
-static bool pjg_encode_zdst_low( aricoder* enc, int cmp )
+static bool pjg_encode_zdst_low(const std::unique_ptr<aricoder>& enc, int cmp )
 {
 	model_s* model;
 	
@@ -4723,7 +4721,7 @@ static bool pjg_encode_zdst_low( aricoder* enc, int cmp )
 /* -----------------------------------------------
 	encodes DC coefficients to pjg
 	----------------------------------------------- */
-static bool pjg_encode_dc( aricoder* enc, int cmp )
+static bool pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp )
 {
 	unsigned char* segm_tab;
 	
@@ -4843,7 +4841,7 @@ static bool pjg_encode_dc( aricoder* enc, int cmp )
 /* -----------------------------------------------
 	encodes high (7x7) AC coefficients to pjg
 	----------------------------------------------- */
-static bool pjg_encode_ac_high( aricoder* enc, int cmp )
+static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
 {
 	unsigned char* segm_tab;
 	
@@ -5027,7 +5025,7 @@ static bool pjg_encode_ac_high( aricoder* enc, int cmp )
 /* -----------------------------------------------
 	encodes first row/col AC coefficients to pjg
 	----------------------------------------------- */
-static bool pjg_encode_ac_low( aricoder* enc, int cmp )
+static bool pjg_encode_ac_low(const std::unique_ptr<aricoder>& enc, int cmp )
 {
 	model_s* mod_len;
 	model_b* mod_sgn;
@@ -5191,7 +5189,7 @@ static bool pjg_encode_ac_low( aricoder* enc, int cmp )
 /* -----------------------------------------------
 	encodes a stream of generic (8bit) data to pjg
 	----------------------------------------------- */
-static bool pjg_encode_generic( aricoder* enc, unsigned char* data, int len )
+static bool pjg_encode_generic(const std::unique_ptr<aricoder>& enc, unsigned char* data, int len )
 {
 	model_s* model;
 	int i;
@@ -5216,7 +5214,7 @@ static bool pjg_encode_generic( aricoder* enc, unsigned char* data, int len )
 /* -----------------------------------------------
 	encodes one bit to pjg
 	----------------------------------------------- */
-static bool pjg_encode_bit( aricoder* enc, unsigned char bit )
+static bool pjg_encode_bit(const std::unique_ptr<aricoder>& enc, unsigned char bit )
 {
 	model_b* model;
 	
@@ -5234,7 +5232,7 @@ static bool pjg_encode_bit( aricoder* enc, unsigned char bit )
 /* -----------------------------------------------
 	encodes frequency scanorder to pjg
 	----------------------------------------------- */
-static bool pjg_decode_zstscan( aricoder* dec, int cmp )
+static bool pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp )
 {	
 	model_s* model;;
 	
@@ -5300,7 +5298,7 @@ static bool pjg_decode_zstscan( aricoder* dec, int cmp )
 /* -----------------------------------------------
 	decodes # of non zeroes from pjg (high)
 	----------------------------------------------- */
-static bool pjg_decode_zdst_high( aricoder* dec, int cmp )
+static bool pjg_decode_zdst_high(const std::unique_ptr<aricoder>& dec, int cmp )
 {
 	model_s* model;
 	
@@ -5340,7 +5338,7 @@ static bool pjg_decode_zdst_high( aricoder* dec, int cmp )
 /* -----------------------------------------------
 	decodes # of non zeroes from pjg (low)
 	----------------------------------------------- */	
-static bool pjg_decode_zdst_low( aricoder* dec, int cmp )
+static bool pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp )
 {
 	model_s* model;
 	
@@ -5387,7 +5385,7 @@ static bool pjg_decode_zdst_low( aricoder* dec, int cmp )
 /* -----------------------------------------------
 	decodes DC coefficients from pjg
 	----------------------------------------------- */
-static bool pjg_decode_dc( aricoder* dec, int cmp )
+static bool pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp )
 {
 	unsigned char* segm_tab;
 	
@@ -5507,7 +5505,7 @@ static bool pjg_decode_dc( aricoder* dec, int cmp )
 /* -----------------------------------------------
 	decodes high (7x7) AC coefficients to pjg
 	----------------------------------------------- */
-static bool pjg_decode_ac_high( aricoder* dec, int cmp )
+static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
 {
 	unsigned char* segm_tab;
 	
@@ -5691,7 +5689,7 @@ static bool pjg_decode_ac_high( aricoder* dec, int cmp )
 /* -----------------------------------------------
 	decodes high (7x7) AC coefficients to pjg
 	----------------------------------------------- */
-static bool pjg_decode_ac_low( aricoder* dec, int cmp )
+static bool pjg_decode_ac_low(const std::unique_ptr<aricoder>& dec, int cmp )
 {
 	model_s* mod_len;
 	model_b* mod_sgn;
@@ -5853,7 +5851,7 @@ static bool pjg_decode_ac_low( aricoder* dec, int cmp )
 /* -----------------------------------------------
 	deodes a stream of generic (8bit) data from pjg
 	----------------------------------------------- */
-static bool pjg_decode_generic( aricoder* dec, unsigned char** data, int* len )
+static bool pjg_decode_generic(const std::unique_ptr<aricoder>& dec, unsigned char** data, int* len )
 {
 	abytewriter* bwrt;
 	model_s* model;
@@ -5894,7 +5892,7 @@ static bool pjg_decode_generic( aricoder* dec, unsigned char** data, int* len )
 /* -----------------------------------------------
 	decodes one bit from pjg
 	----------------------------------------------- */
-static bool pjg_decode_bit( aricoder* dec, unsigned char* bit )
+static bool pjg_decode_bit(const std::unique_ptr<aricoder>& dec, unsigned char* bit )
 {
 	model_b* model;
 	

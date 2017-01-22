@@ -205,7 +205,7 @@ static inline void shift_model( model_b* model, int ctx1, int ctx2, int ctx3 )
 /* -----------------------------------------------
 	generic model_s encoder function
 	----------------------------------------------- */
-static inline void encode_ari( aricoder* encoder, model_s* model, int c )
+static inline void encode_ari(const std::unique_ptr<aricoder>& encoder, model_s* model, int c )
 {
 	static symbol s;
 	static int esc;
@@ -220,7 +220,7 @@ static inline void encode_ari( aricoder* encoder, model_s* model, int c )
 /* -----------------------------------------------
 	generic model_s decoder function
 	----------------------------------------------- */	
-static inline int decode_ari( aricoder* decoder, model_s* model )
+static inline int decode_ari(const std::unique_ptr<aricoder>& decoder, model_s* model )
 {
 	static symbol s;
 	static unsigned int count;
@@ -240,7 +240,7 @@ static inline int decode_ari( aricoder* decoder, model_s* model )
 /* -----------------------------------------------
 	generic model_b encoder function
 	----------------------------------------------- */	
-static inline void encode_ari( aricoder* encoder, model_b* model, int c )
+static inline void encode_ari(const std::unique_ptr<aricoder>& encoder, model_b* model, int c )
 {
 	static symbol s;
 	
@@ -252,7 +252,7 @@ static inline void encode_ari( aricoder* encoder, model_b* model, int c )
 /* -----------------------------------------------
 	generic model_b decoder function
 	----------------------------------------------- */	
-static inline int decode_ari( aricoder* decoder, model_b* model )
+static inline int decode_ari(const std::unique_ptr<aricoder>& decoder, model_b* model )
 {
 	static symbol s;
 	static unsigned int count;
