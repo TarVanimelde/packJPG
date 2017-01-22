@@ -306,10 +306,6 @@ packJPG by Matthias Stirner, 01/2016
 #define E_ENVLI(s,v)	( v - ( 1 << s ) )
 #define E_DEVLI(s,n)	( n + ( 1 << s ) )
 
-#define IPOS(w,v,h)		( ( v * w ) + h )
-#define NPOS(n1,n2,p)	( ( ( p / n1 ) * n2 ) + ( p % n1 ) )
-#define ROUND_F(v1)		( (v1 < 0) ? (int) (v1 - 0.5) : (int) (v1 + 0.5) )
-#define DIV_INT(v1,v2)	( (v1 < 0) ? (v1 - (v2>>1)) / v2 : (v1 + (v2>>1)) / v2 )
 #define B_SHORT(v1,v2)	( ( ((int) v1) << 8 ) + ((int) v2) )
 #define BITLEN1024P(v)	( pbitlen_0_1024[ v ] )
 #define BITLEN2048N(v)	( (pbitlen_n2048_2047+2048)[ v ] )
@@ -4704,7 +4700,6 @@ static bool pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp )
 	unsigned char* zdstls; // pointer to zero distribution list
 	signed short* coeffs; // pointer to current coefficent data
 	
-	unsigned short* absv_store; // absolute coefficients values storage
 	unsigned short* c_absc[ 6 ]; // quick access array for contexts
 	int c_weight[ 6 ]; // weighting for contexts
 
@@ -4732,24 +4727,19 @@ static bool pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp )
 	max_len = BITLEN1024P( max_val );
 	
 	// init models for bitlenghts and -patterns	
-	auto mod_len = std::make_unique<model_s>( max_len + 1, ( segm_cnt[cmp] > max_len ) ? segm_cnt[cmp] : max_len + 1, 2 );
-	auto mod_res = std::make_unique<model_b>( ( segm_cnt[cmp] < 16 ) ? 1 << 4 : segm_cnt[cmp], 2 );
-	auto mod_sgn = std::make_unique<model_b>( 1, 0 );
+	auto mod_len = std::make_unique<model_s>(max_len + 1, std::max(max_len+1, int(segm_cnt[cmp])), 2 );
+	auto mod_res = std::make_unique<model_b>(std::max(16, int(segm_cnt[cmp])), 2 );
+	auto mod_sgn = std::make_unique<model_b>(1, 0);
 	
 	// set width/height of each band
 	bc = cmpnfo[cmp].bc;
 	w = cmpnfo[cmp].bch;
 	
 	// allocate memory for absolute values storage
-	absv_store = (unsigned short*) calloc ( bc, sizeof( short ) );
-	if ( absv_store == nullptr ) {
-		sprintf( errormessage, MEM_ERRMSG );
-		errorlevel = 2;
-		return false;
-	}
+	std::vector<unsigned short> absv_store(bc); // absolute coefficients values storage
 	
 	// set up context quick access array
-	pjg_aavrg_prepare( c_absc, c_weight, absv_store, cmp );
+	pjg_aavrg_prepare( c_absc, c_weight, absv_store.data(), cmp );
 	
 	// locally store pointer to coefficients and zero distribution list
 	coeffs = colldata[ cmp ][ 0 ];
@@ -4799,9 +4789,6 @@ static bool pjg_encode_dc(const std::unique_ptr<aricoder>& enc, int cmp )
 		}
 	}
 	
-	// free memory / clear models
-	free( absv_store );
-	
 	return true;
 }
 
@@ -4842,8 +4829,8 @@ static bool pjg_encode_ac_high(const std::unique_ptr<aricoder>& enc, int cmp )
 	segm_tab = segm_tables[ segm_cnt[ cmp ] - 1 ];
 	
 	// init models for bitlenghts and -patterns
-	auto mod_len = std::make_unique<model_s>(11, std::max(unsigned char(11), segm_cnt[cmp]), 2);
-	auto mod_res = std::make_unique<model_b>(std::max(unsigned char(16), segm_cnt[cmp]), 2);
+	auto mod_len = std::make_unique<model_s>(11, std::max(11, int(segm_cnt[cmp])), 2);
+	auto mod_res = std::make_unique<model_b>(std::max(16, int(segm_cnt[cmp])), 2);
 	auto mod_sgn = std::make_unique<model_b>(9, 1);
 	
 	// set width/height of each band
@@ -5282,81 +5269,52 @@ static bool pjg_decode_zdst_low(const std::unique_ptr<aricoder>& dec, int cmp )
 	decodes DC coefficients from pjg
 	----------------------------------------------- */
 static bool pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp )
-{
-	unsigned char* segm_tab;
-	
-	unsigned char* zdstls; // pointer to zero distribution list
-	signed short* coeffs; // pointer to current coefficent data
-	
-	unsigned short* absv_store; // absolute coefficients values storage
-	unsigned short* c_absc[ 6 ]; // quick access array for contexts
-	int c_weight[ 6 ]; // weighting for contexts
-
-	int ctx_avr; // 'average' context
-	int ctx_len; // context for bit length
-	
-	int max_val; // max value
-	int max_len; // max bitlength
-	
-	int dpos;
-	int clen, absv, sgn;
-	int snum;
-	int bt, bp;
-	
-	int p_x, p_y;
-	int r_x; //, r_y;
-	int w, bc;
-	
-	
+{			
 	// decide segmentation setting
-	segm_tab = segm_tables[ segm_cnt[ cmp ] - 1 ];
+	unsigned char* segm_tab = segm_tables[ segm_cnt[ cmp ] - 1 ];
 	
 	// get max absolute value/bit length
-	max_val = MAX_V( cmp, 0 );
-	max_len = BITLEN1024P( max_val );
+	const int max_val = MAX_V( cmp, 0 ); // max value
+	const int max_len = BITLEN1024P( max_val ); // max bitlength
 	
 	// init models for bitlenghts and -patterns
-	auto mod_len = std::make_unique<model_s>( max_len + 1, ( segm_cnt[cmp] > max_len ) ? segm_cnt[cmp] : max_len + 1, 2 );
-	auto mod_res = std::make_unique<model_b>( ( segm_cnt[cmp] < 16 ) ? 1 << 4 : segm_cnt[cmp], 2 );
-	auto mod_sgn = std::make_unique<model_b>( 1, 0 );
+	auto mod_len = std::make_unique<model_s>(max_len + 1, std::max(max_len + 1, int(segm_cnt[cmp])), 2);
+	auto mod_res = std::make_unique<model_b>(std::max(16, int(segm_cnt[cmp])), 2);
+	auto mod_sgn = std::make_unique<model_b>(1, 0);
 	
 	// set width/height of each band
-	bc = cmpnfo[cmp].bc;
-	w = cmpnfo[cmp].bch;
+	const int bc = cmpnfo[cmp].bc;
+	const int w = cmpnfo[cmp].bch;
 	
 	// allocate memory for absolute values storage
-	absv_store = (unsigned short*) calloc ( bc, sizeof( short ) );
-	if ( absv_store == nullptr ) {
-		sprintf( errormessage, MEM_ERRMSG );
-		errorlevel = 2;
-		return false;
-	}
+	std::vector<unsigned short> absv_store(bc); // absolute coefficients values storage
 	
 	// set up context quick access array
-	pjg_aavrg_prepare( c_absc, c_weight, absv_store, cmp );
+	unsigned short* c_absc[6]; // quick access array for contexts
+	int c_weight[6]; // weighting for contexts
+	pjg_aavrg_prepare( c_absc, c_weight, absv_store.data(), cmp );
 	
 	// locally store pointer to coefficients and zero distribution list
-	coeffs = colldata[ cmp ][ 0 ];
-	zdstls = zdstdata[ cmp ];	
+	auto coeffs = colldata[ cmp ][ 0 ]; // pointer to current coefficent data
+	const auto zdstls = zdstdata[ cmp ]; // pointer to zero distribution list	
 	
 	// arithmetic compression loop
-	for ( dpos = 0; dpos < bc; dpos++ )
+	for (int dpos = 0; dpos < bc; dpos++ )
 	{		
 		//calculate x/y positions in band
-		p_y = dpos / w;
-		// r_y = h - ( p_y + 1 );
-		p_x = dpos % w;
-		r_x = w - ( p_x + 1 );
+		const int p_y = dpos / w;
+		const int p_x = dpos % w;
+		const int r_x = w - ( p_x + 1 );
 		
 		// get segment-number from zero distribution list and segmentation set
-		snum = segm_tab[ zdstls[dpos] ];
+		const int snum = segm_tab[ zdstls[dpos] ];
 		// calculate contexts (for bit length)
-		ctx_avr = pjg_aavrg_context( c_absc, c_weight, dpos, p_y, p_x, r_x ); // AVERAGE context
-		ctx_len = BITLEN1024P( ctx_avr ); // BITLENGTH context				
+		const int ctx_avr = pjg_aavrg_context( c_absc, c_weight, dpos, p_y, p_x, r_x ); // AVERAGE context
+		const int ctx_len = BITLEN1024P( ctx_avr ); // BITLENGTH context				
 		// shift context / do context modelling (segmentation is done per context)
 		shift_model( mod_len, ctx_len, snum );
 		// decode bit length of current coefficient
-		clen = decode_ari( dec, mod_len );
+		const int clen = decode_ari( dec, mod_len );
 		
 		// simple treatment if coefficient is zero
 		if ( clen == 0 ) {
@@ -5364,18 +5322,18 @@ static bool pjg_decode_dc(const std::unique_ptr<aricoder>& dec, int cmp )
 		}
 		else {
 			// decoding of residual
-			absv = 1;
+			int absv = 1;
 			// first set bit must be 1, so we start at clen - 2
-			for ( bp = clen - 2; bp >= 0; bp-- ) {
+			for (int bp = clen - 2; bp >= 0; bp-- ) {
 				shift_model( mod_res, snum, bp ); // shift in 2 contexts
 				// decode bit
-				bt = decode_ari( dec, mod_res );
+				const int bt = decode_ari( dec, mod_res );
 				// update absv
 				absv = absv << 1;
 				if ( bt ) absv |= 1; 
 			}
 			// decode sign
-			sgn = decode_ari( dec, mod_sgn );
+			const int sgn = decode_ari( dec, mod_sgn );
 			// copy to colldata
 			coeffs[ dpos ] = ( sgn == 0 ) ? absv : -absv;
 			// store absolute value/sign
@@ -5422,8 +5380,8 @@ static bool pjg_decode_ac_high(const std::unique_ptr<aricoder>& dec, int cmp )
 	segm_tab = segm_tables[ segm_cnt[ cmp ] - 1 ];
 	
 	// init models for bitlengths and -patterns
-	auto mod_len = std::make_unique<model_s>(11, std::max(unsigned char(11), segm_cnt[cmp]), 2);
-	auto mod_res = std::make_unique<model_b>(std::max(unsigned char(16), segm_cnt[cmp]), 2);
+	auto mod_len = std::make_unique<model_s>(11, std::max(11, int(segm_cnt[cmp])), 2);
+	auto mod_res = std::make_unique<model_b>(std::max(16, int(segm_cnt[cmp])), 2);
 	auto mod_sgn = std::make_unique<model_b>(9, 1);
 	
 	// set width/height of each band
