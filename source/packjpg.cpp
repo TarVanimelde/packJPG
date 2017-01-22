@@ -280,6 +280,7 @@ packJPG by Matthias Stirner, 01/2016
 #include "pjpgtbl.h"
 #include "dct8x8.h"
 
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -5134,25 +5135,20 @@ static bool pjg_encode_bit(const std::unique_ptr<aricoder>& enc, unsigned char b
 	----------------------------------------------- */
 static bool pjg_decode_zstscan(const std::unique_ptr<aricoder>& dec, int cmp )
 {		
-	unsigned char freqlist[ 64 ];
 	int tpos; // true position
-	int cpos; // coded position
-	int i;
-	
+	int cpos; // coded position	
 	
 	// set first position in zero sort scan
 	zsrtscan[ cmp ][ 0 ] = 0;
 	
-	// preset freqlist
-	for ( i = 0; i < 64; i++ )
-		freqlist[ i ] = stdscan[ i ];
+	std::array<unsigned char, 64> freqlist;
+	std::copy(std::begin(stdscan), std::end(stdscan), std::begin(freqlist));
 		
 	// init model
 	auto model = std::make_unique<model_s>( 64, 64, 1 );
 	
 	// encode scanorder
-	for ( i = 1; i < 64; i++ )
-	{			
+	for (int i = 1; i < 64; i++ ) {			
 		// reduce range of model
 		model->exclude_symbols( 'a', 64 - i );
 		
