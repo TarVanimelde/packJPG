@@ -279,6 +279,8 @@ packJPG by Matthias Stirner, 01/2016
 #include "aricoder.h"
 #include "pjpgtbl.h"
 #include "dct8x8.h"
+
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -428,12 +430,12 @@ static int jpg_decode_dc_prg_sa( abitreader* huffr, short* block );
 static int jpg_encode_dc_prg_sa( abitwriter* huffw, short* block );
 static int jpg_decode_ac_prg_sa( abitreader* huffr, huffTree* actree, short* block,
 						int* eobrun, int from, int to );
-static int jpg_encode_ac_prg_sa( abitwriter* huffw, abytewriter* storw, huffCodes* actbl,
+static int jpg_encode_ac_prg_sa( abitwriter* huffw, const std::unique_ptr<abytewriter>&  storw, huffCodes* actbl,
 						short* block, int* eobrun, int from, int to );
 
 static int jpg_decode_eobrun_sa( abitreader* huffr, short* block, int* eobrun, int from, int to );
 static int jpg_encode_eobrun( abitwriter* huffw, huffCodes* actbl, int* eobrun );
-static int jpg_encode_crbits( abitwriter* huffw, abytewriter* storw );
+static int jpg_encode_crbits( abitwriter* huffw, const std::unique_ptr<abytewriter>& storw );
 
 static int jpg_next_huffcode( abitreader *huffw, huffTree *ctree );
 static int jpg_next_mcupos( int* mcu, int* cmp, int* csc, int* sub, int* dpos, int* rstw );
@@ -2048,21 +2050,17 @@ static bool read_jpeg()
 	unsigned int   crst = 0; // current rst marker counter
 	unsigned int   cpos = 0; // rst marker counter
 	unsigned char  tmp;	
-	
-	abytewriter* huffw;	
-	abytewriter* hdrw;
-	abytewriter* grbgw;	
-	
+		
 	
 	// preset count of scans
 	scnc = 0;
 	
 	// start headerwriter
-	hdrw = new abytewriter( 4096 );
+	auto hdrw = std::make_unique<abytewriter>( 4096 );
 	hdrs = 0; // size of header data, start with 0
 	
 	// start huffman writer
-	huffw = new abytewriter( 0 );
+	auto huffw = std::make_unique<abytewriter>( 0 );
 	hufs  = 0; // size of image data, start with 0
 	
 	// alloc memory for segment data first
@@ -2146,8 +2144,6 @@ static bool read_jpeg()
 					if ( segment[ 0 ] == 0xFF ) errorlevel = 1;
 				}
 				if ( errorlevel == 2 ) {
-					delete ( hdrw );
-					delete ( huffw );
 					return false;
 				}
 			}
@@ -2185,10 +2181,6 @@ static bool read_jpeg()
 	}
 	// JPEG reader loop end
 	
-	// free writers
-	delete hdrw;
-	delete huffw;
-	
 	// check if everything went OK
 	if ( ( hdrs == 0 ) || ( hufs == 0 ) ) {
 		sprintf( errormessage, "unexpected end of data encountered" );
@@ -2199,7 +2191,7 @@ static bool read_jpeg()
 	// store garbage after EOI if needed
 	grbs = str_in->read( &tmp, 1, 1 );	
 	if ( grbs > 0 ) {
-		grbgw = new abytewriter( 1024 );
+		auto grbgw = std::make_unique<abytewriter>( 1024 );
 		grbgw->write( tmp );
 		while( true ) {
 			len = str_in->read( segment.data(), 1, segment.size() );
@@ -2208,7 +2200,6 @@ static bool read_jpeg()
 		}
 		grbgdata = grbgw->getptr();
 		grbs     = grbgw->getpos();
-		delete ( grbgw );
 	}
 	
 	// get filesize
@@ -2690,7 +2681,6 @@ static bool decode_jpeg()
 static bool recode_jpeg()
 {
 	abitwriter*  huffw; // bitwise writer for image data
-	abytewriter* storw; // bytewise writer for storage of correction bits
 	
 	unsigned char  type = 0x00; // type of current marker segment
 	unsigned int   len  = 0; // length of current marker segment
@@ -2712,7 +2702,7 @@ static bool recode_jpeg()
 	huffw->set_fillbit( padbit );
 	
 	// init storage writer
-	storw = new abytewriter( 0 );
+	auto storw = std::make_unique<abytewriter>( 0 ); // bytewise writer for storage of correction bits
 	
 	// preset count of scans and restarts
 	scnc = 0;
@@ -2989,9 +2979,6 @@ static bool recode_jpeg()
 	huffdata = huffw->getptr();
 	hufs = huffw->getpos();	
 	delete huffw;
-	
-	// remove storage writer
-	delete storw;
 	
 	// store last scan & restart positions
 	scnp[ scnc ] = hufs;
@@ -4211,7 +4198,7 @@ static int jpg_decode_ac_prg_sa( abitreader* huffr, huffTree* actree, short* blo
 /* -----------------------------------------------
 	progressive AC SA encoding routine
 	----------------------------------------------- */
-static int jpg_encode_ac_prg_sa( abitwriter* huffw, abytewriter* storw, huffCodes* actbl, short* block, int* eobrun, int from, int to )
+static int jpg_encode_ac_prg_sa( abitwriter* huffw, const std::unique_ptr<abytewriter>& storw, huffCodes* actbl, short* block, int* eobrun, int from, int to )
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4346,7 +4333,7 @@ static int jpg_encode_eobrun( abitwriter* huffw, huffCodes* actbl, int* eobrun )
 /* -----------------------------------------------
 	correction bits encoding routine
 	----------------------------------------------- */
-static int jpg_encode_crbits( abitwriter* huffw, abytewriter* storw )
+static int jpg_encode_crbits( abitwriter* huffw, const std::unique_ptr<abytewriter>& storw )
 {	
 	unsigned char* data;
 	int len;
