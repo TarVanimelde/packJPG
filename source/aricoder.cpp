@@ -711,7 +711,7 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	
 	// copy settings into model
 	max_context = max_c;
-	max_order   = max_o;
+	max_order   = max_o + 1;
 	max_count   = c_lim;
 	
 	// set up null table
@@ -730,15 +730,14 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	null_table->links = std::vector<table*>(max_context, start_table);
 	
 	// alloc memory for storage & contexts
-	storage = new table*[max_order + 3];
-	contexts = storage + 1;
+	contexts = std::vector<table*>(max_order + 2);
 	
 	// integrate tables into contexts
-	contexts[ -1 ] = null_table;
-	contexts[  0 ] = start_table;
+	contexts[ 0 ] = null_table;
+	contexts[ 1 ] = start_table;
 	
 	// build initial 'normal' tables
-	for (int i = 1; i <= max_order; i++ ) {
+	for (int i = 2; i <= max_order; i++ ) {
 		// set up current order table
 		contexts[i] = new table;
 		contexts[ i ]->scale = 0;
@@ -762,18 +761,15 @@ model_b::~model_b()
 	
 	
 	// clean up each 'normal' table
-	context = contexts[ 0 ];
+	context = contexts[ 1 ];
 	recursive_cleanup ( context );
 	
 	// clean up null table
-	context = contexts[ -1 ];
+	context = contexts[ 0];
 	if (context->counts != nullptr) {
 		delete[] context->counts;
 	}
 	delete context;
-	
-	// free everything else
-	delete[] storage;
 }
 
 
@@ -809,10 +805,10 @@ void model_b::shift_context( int c )
 {
 	// shifting is not possible if max_order is below 1
 	// or context index is negative
-	if ( (max_order < 1 ) || ( c < 0 ) ) return;
+	if ( (max_order < 2 ) || ( c < 0 ) ) return;
 	
 	// shift each orders' context
-	for (int i = max_order; i > 0; i-- ) {
+	for (int i = max_order; i > 1; i-- ) {
 		// this is the new current order context
 		table* context = contexts[ i - 1 ]->links[ c ];
 		
@@ -847,7 +843,7 @@ void model_b::shift_context( int c )
 	
 void model_b::flush_model( int scale_factor )
 {
-	recursive_flush( contexts[ 0 ], scale_factor );
+	recursive_flush( contexts[ 1 ], scale_factor );
 }
 
 

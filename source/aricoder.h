@@ -159,8 +159,7 @@ class model_b
 	
 	private:
 	
-	table **contexts;
-	table **storage;
+	std::vector<table*> contexts;
 	
 	int max_context;
 	int max_order;
