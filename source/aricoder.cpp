@@ -308,8 +308,7 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	std::fill(null_table->links, null_table->links + max_context, start_table);
 	
 	// alloc memory for storage & contexts
-	contexts = new table_s*[max_order + 3];
-	std::fill(contexts, contexts + max_order + 3, nullptr);
+	contexts = std::vector<table_s*>(max_order + 3);
 	
 	// integrate tables into contexts
 	contexts[ 0 ] = null_table;
@@ -356,7 +355,6 @@ model_s::~model_s()
 	delete context;
 	
 	// free everything else
-	delete[] contexts;
 	delete[] scoreboard;
 }
 

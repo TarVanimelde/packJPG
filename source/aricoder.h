@@ -123,7 +123,7 @@ class model_s
 	std::vector<uint32_t> totals;
 	bool* scoreboard;
 	int sb0_count;
-	table_s **contexts;
+	std::vector<table_s*> contexts;
 	
 	int max_symbol;
 	int max_context;
