@@ -39,7 +39,7 @@ struct table {
 // holding additional info for a speedier 'totalize_table'
 struct table_s {
 	// counts for each symbol contained in the table
-	unsigned short* counts = nullptr;
+	std::vector<uint16_t> counts;
 	// links to higher order contexts
 	std::vector<table_s*> links;
 	// link to lower order context

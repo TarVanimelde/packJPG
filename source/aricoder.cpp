@@ -287,8 +287,7 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	
 	// set up null table
 	table_s* null_table = new table_s;
-	null_table->counts = new unsigned short[max_symbol];
-	std::fill(null_table->counts, null_table->counts + max_symbol, unsigned short(1)); // Set all probabilities.
+	null_table->counts = std::vector<uint16_t>(max_symbol, uint16_t(1));  // Set all probabilities to 1.
 
 	// set up internal counts
 	null_table->max_count = 1;
@@ -336,16 +335,12 @@ model_s::~model_s()
 {
 	table_s* context;
 	
-	
 	// clean up each 'normal' table
-	context = contexts[ 1 ];
+	context = contexts[1];
 	recursive_cleanup ( context );
 	
 	// clean up null table
-	context = contexts[ 0];
-	if (context->counts != nullptr) {
-		delete[] context->counts;
-	}
+	context = contexts[0];
 	delete context;
 	
 	// free everything else
@@ -362,20 +357,20 @@ void model_s::update_model( int symbol )
 	// use -1 if you just want to reset without updating statistics
 		
 	// only contexts, that were actually used to encode
-	// the symbol get their counts updated
+	// the symbol get its count updated
 	if ( symbol >= 0 ) {
 		for (int local_order = ( current_order < 1 ) ? 1 : current_order;
 				local_order <= max_order; local_order++ ) {
 			table_s* context = contexts[ local_order ];
-			unsigned short* counts = context->counts + symbol;
+			auto& count = context->counts[symbol];
 			// update count for specific symbol & scale
-			(*counts)++;
+			count++;
 			// store side information for totalize_table
-			if ( (*counts) > context->max_count ) context->max_count = (*counts);
+			if ( count > context->max_count ) context->max_count = count;
 			if ( symbol >= context->max_symbol ) context->max_symbol = symbol+1;
-			// if counts for that symbol have gone above the maximum count
+			// if count for that symbol have gone above the maximum count
 			// the table has to be resized (scale factor 2)
-			if ( (*counts) >= max_count )
+			if ( count >= max_count )
 				rescale_table( context, 1 );
 		}
 	}
@@ -409,7 +404,6 @@ void model_s::shift_context( int c )
 		if ( context == nullptr ) {
 			// reserve memory for next table_s
 			context = new table_s;		
-			// set counts nullptr
 			// setup internal counts
 			context->max_count  = 0;
 			context->max_symbol = 0;
@@ -579,7 +573,6 @@ void model_s::totalize_table( table_s *context )
 	// accumulated counts must never exceed CODER_MAXSCALE
 	// as CODER_MAXSCALE is big enough, though, (2^29), this shouldn't happen and is not checked
 
-	unsigned short* counts;
 	signed int      local_symb;
 	unsigned int    curr_total;
 	unsigned int    curr_count;
@@ -587,10 +580,10 @@ void model_s::totalize_table( table_s *context )
 	int i;
 	
 	// make a local copy of the pointer
-	counts = context->counts;
+	auto& counts = context->counts;
 	
 	// check counts
-	if ( counts != nullptr ) {	// if counts are already set
+	if ( !counts.empty() ) {	// if counts are already set
 		// locally store current fill/symbol count
 		local_symb = sb0_count;
 		
@@ -632,8 +625,7 @@ void model_s::totalize_table( table_s *context )
 	}
 	else { // if counts are not already set
 		// setup counts for current table
-		context->counts = new unsigned short[max_symbol];
-		std::fill(context->counts, context->counts + max_symbol, unsigned short(0));
+		context->counts = std::vector<uint16_t>(max_symbol);
 		// set totals table -> only escape probability included
 		totals[ 0 ] = 1;
 		totals[ 1 ] = 0;
@@ -647,12 +639,12 @@ void model_s::totalize_table( table_s *context )
 	
 inline void model_s::rescale_table( table_s* context, int scale_factor )
 {
-	unsigned short* counts = context->counts;
+	auto& counts = context->counts;
 	int lst_symbol = context->max_symbol;
 	int i;
 	
 	// return now if counts not set
-	if ( counts == nullptr ) return;
+	if ( counts.empty() ) return;
 	
 	// now scale the table by bitshifting each count
 	for ( i = 0; i < lst_symbol; i++ ) {
@@ -702,9 +694,6 @@ inline void model_s::recursive_cleanup( table_s *context )
 	}
 
 	// clean up table	
-	if (context->counts != nullptr) {
-		delete[] context->counts;
-	}
 	delete context;
 }
 
