@@ -275,8 +275,9 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	max_count   = c_lim;
 	
 	// alloc memory for totals table
-	totals = new unsigned int[max_symbol + 2];
-	std::fill(totals, totals + max_symbol + 2, unsigned int(0));
+	totals = std::vector<uint32_t>(max_symbol + 2);
+	/*totals = new unsigned int[max_symbol + 2];
+	std::fill(totals, totals + max_symbol + 2, unsigned int(0));*/
 	
 	// alloc memory for scoreboard, set sb0_count
 	scoreboard = new bool[max_symbol];
@@ -359,7 +360,6 @@ model_s::~model_s()
 	
 	// free everything else
 	delete[] storage;
-	delete[] totals;
 	delete[] scoreboard;
 }
 

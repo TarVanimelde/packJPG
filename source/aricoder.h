@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "bitops.h"
+#include <vector>
 
 // defines for coder
 constexpr uint32_t CODER_USE_BITS = 31; // Must never be above 31.
@@ -119,8 +120,7 @@ class model_s
 	
 	private:
 	
-	// unsigned short* totals;
-	unsigned int* totals;
+	std::vector<uint32_t> totals;
 	bool* scoreboard;
 	int sb0_count;
 	table_s **contexts;
