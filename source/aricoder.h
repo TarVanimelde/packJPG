@@ -85,7 +85,7 @@ class model_s
 {	
 	public:
 	
-	model_s( int max_s, int max_c, int max_o, int c_lim );
+	model_s( int max_s, int max_c, int max_o, int c_lim = 255 );
 	~model_s( void );
 	
 	void update_model( int symbol );
@@ -130,7 +130,7 @@ class model_b
 {	
 	public:
 	
-	model_b( int max_c, int max_o, int c_lim );
+	model_b( int max_c, int max_o, int c_lim = 255 );
 	~model_b( void );
 	
 	void update_model( int symbol );
@@ -159,53 +159,22 @@ class model_b
 	inline void recursive_cleanup( table *context );
 };
 
+// Base case for shifting an arbitrary number of contexts into the model.
+template <typename M>
+static void shift_model(const M& model) {}
 
-/* -----------------------------------------------
-	shift context x2 model_s function
-	----------------------------------------------- */
-static inline void shift_model( model_s* model, int ctx1, int ctx2 )
-{
-	model->shift_context( ctx1 );
-	model->shift_context( ctx2 );
-}
-
-
-/* -----------------------------------------------
-	shift context x3 model_s function
-	----------------------------------------------- */
-static inline void shift_model( model_s* model, int ctx1, int ctx2, int ctx3 )
-{
-	model->shift_context( ctx1 );
-	model->shift_context( ctx2 );
-	model->shift_context( ctx3 );
-}
-
-
-/* -----------------------------------------------
-	shift context x2 model_b function
-	----------------------------------------------- */
-static inline void shift_model( model_b* model, int ctx1, int ctx2 )
-{
-	model->shift_context( ctx1 );
-	model->shift_context( ctx2 );
-}
-
-
-/* -----------------------------------------------
-	shift context x3 model_b function
-	----------------------------------------------- */
-static inline void shift_model( model_b* model, int ctx1, int ctx2, int ctx3 )
-{
-	model->shift_context( ctx1 );
-	model->shift_context( ctx2 );
-	model->shift_context( ctx3 );
+// Shift an arbitrary number of contexts into the model (at most max_c contexts).
+template <typename M, typename C, typename... Cargs>
+static void shift_model(const M& model, C context, Cargs ... contextList) {
+	model->shift_context(context);
+	shift_model(model, contextList...);
 }
 
 
 /* -----------------------------------------------
 	generic model_s encoder function
 	----------------------------------------------- */
-static inline void encode_ari( aricoder* encoder, model_s* model, int c )
+static inline void encode_ari(const std::unique_ptr<aricoder>& encoder, const std::unique_ptr<model_s>& model, int c )
 {
 	static symbol s;
 	static int esc;
@@ -220,7 +189,7 @@ static inline void encode_ari( aricoder* encoder, model_s* model, int c )
 /* -----------------------------------------------
 	generic model_s decoder function
 	----------------------------------------------- */	
-static inline int decode_ari( aricoder* decoder, model_s* model )
+static inline int decode_ari(const std::unique_ptr<aricoder>& decoder, const std::unique_ptr<model_s>& model )
 {
 	static symbol s;
 	static unsigned int count;
@@ -240,7 +209,7 @@ static inline int decode_ari( aricoder* decoder, model_s* model )
 /* -----------------------------------------------
 	generic model_b encoder function
 	----------------------------------------------- */	
-static inline void encode_ari( aricoder* encoder, model_b* model, int c )
+static inline void encode_ari(const std::unique_ptr<aricoder>& encoder, const std::unique_ptr<model_b>& model, int c )
 {
 	static symbol s;
 	
@@ -252,7 +221,7 @@ static inline void encode_ari( aricoder* encoder, model_b* model, int c )
 /* -----------------------------------------------
 	generic model_b decoder function
 	----------------------------------------------- */	
-static inline int decode_ari( aricoder* decoder, model_b* model )
+static inline int decode_ari(const std::unique_ptr<aricoder>& decoder, const std::unique_ptr<model_b>& model )
 {
 	static symbol s;
 	static unsigned int count;
