@@ -26,7 +26,7 @@ struct symbol {
 // holding all info needed for one context
 struct table {
 	// counts for each symbol contained in the table
-	unsigned short* counts = nullptr;
+	std::vector<uint16_t> counts;
 	// links to higher order contexts
 	std::vector<table*> links;
 	// link to lower order context

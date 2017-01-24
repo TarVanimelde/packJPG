@@ -716,8 +716,7 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	
 	// set up null table
 	table* null_table = new table;
-	null_table->counts = new unsigned short[2];
-	std::fill_n(null_table->counts, 2, unsigned short(1));
+	null_table->counts = std::vector<uint16_t>(2, uint16_t(1));
 	null_table->scale = 2;
 	
 	// set up start table
@@ -766,9 +765,6 @@ model_b::~model_b()
 	
 	// clean up null table
 	context = contexts[ 0];
-	if (context->counts != nullptr) {
-		delete[] context->counts;
-	}
 	delete context;
 }
 
@@ -816,7 +812,6 @@ void model_b::shift_context( int c )
 		if ( context == nullptr ) {
 			// reserve memory for next table
 			context = new table;		
-			// set internal counts nullptr
 			context->scale  = 0;	
 			// link lesser context later if not existing, this is done below
 			context->lesser = contexts[ i - 2 ]->links[ c ];
@@ -920,15 +915,13 @@ int model_b::convert_symbol_to_int( int count, symbol *s )
 	
 inline void model_b::check_counts( table *context )
 {
-	unsigned short* counts = context->counts;
+	auto& counts = context->counts;
 	
 	// check if counts are available
-	if ( counts == nullptr ) {
+	if ( counts.empty() ) {
 		// setup counts for current table
-		counts = new unsigned short[2];
-		std::fill_n(counts, 2, unsigned short(1));
+		counts.resize(2, uint16_t(1));
 		// set scale
-		context->counts = counts;
 		context->scale = 2;
 	}
 }
@@ -940,17 +933,14 @@ inline void model_b::check_counts( table *context )
 	
 inline void model_b::rescale_table( table* context, int scale_factor )
 {
-	unsigned short* counts = context->counts;
-	
-	// return now if counts not set
-	if ( counts == nullptr ) return;
-	
-	// now scale the table by bitshifting each count, be careful not to set any count zero
-	counts[ 0 ] >>= scale_factor;
-	counts[ 1 ] >>= scale_factor;
-	if ( counts[ 0 ] == 0 ) counts[ 0 ] = 1;
-	if ( counts[ 1 ] == 0 ) counts[ 1 ] = 1;
-	context->scale = counts[ 0 ] + counts[ 1 ];
+	auto& counts = context->counts;
+	// Do nothing if counts is not set:
+	if (!counts.empty()) {
+		// Scale the table by bitshifting each count, be careful not to set any count zero:
+		counts[0] = std::max(uint16_t(1), uint16_t(counts[0] >> scale_factor));
+		counts[1] = std::max(uint16_t(1), uint16_t(counts[1] >> scale_factor));
+		context->scale = counts[0] + counts[1];
+	}
 }
 
 
@@ -984,9 +974,6 @@ inline void model_b::recursive_cleanup( table *context )
 		}
 	}
 	
-	// clean up table	
-	if (context->counts != nullptr) {
-		delete[] context->counts;
-	}
+	// clean up table
 	delete context;
 }
