@@ -271,13 +271,11 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	// copy settings into model
 	max_symbol  = max_s;
 	max_context = max_c;
-	max_order   = max_o;
+	max_order   = max_o + 1;
 	max_count   = c_lim;
 	
 	// alloc memory for totals table
 	totals = std::vector<uint32_t>(max_symbol + 2);
-	/*totals = new unsigned int[max_symbol + 2];
-	std::fill(totals, totals + max_symbol + 2, unsigned int(0));*/
 	
 	// alloc memory for scoreboard, set sb0_count
 	scoreboard = new bool[max_symbol];
@@ -310,16 +308,15 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	std::fill(null_table->links, null_table->links + max_context, start_table);
 	
 	// alloc memory for storage & contexts
-	storage = new table_s*[max_order + 3];
-	std::fill(storage, storage + max_order + 3, nullptr);
-	contexts = storage + 1;
+	contexts = new table_s*[max_order + 3];
+	std::fill(contexts, contexts + max_order + 3, nullptr);
 	
 	// integrate tables into contexts
-	contexts[ -1 ] = null_table;
-	contexts[  0 ] = start_table;
+	contexts[ 0 ] = null_table;
+	contexts[ 1 ] = start_table;
 	
 	// build initial 'normal' tables
-	for (int i = 1; i <= max_order; i++ ) {
+	for (int i = 2; i <= max_order; i++ ) {
 		// set up current order table
 		contexts[i] = new table_s;
 		contexts[ i ]->max_count  = 0;
@@ -345,11 +342,11 @@ model_s::~model_s()
 	
 	
 	// clean up each 'normal' table
-	context = contexts[ 0 ];
+	context = contexts[ 1 ];
 	recursive_cleanup ( context );
 	
 	// clean up null table
-	context = contexts[ -1 ];	
+	context = contexts[ 0];	
 	if (context->links != nullptr) {
 		delete[] context->links;
 	}
@@ -359,7 +356,7 @@ model_s::~model_s()
 	delete context;
 	
 	// free everything else
-	delete[] storage;
+	delete[] contexts;
 	delete[] scoreboard;
 }
 
@@ -375,7 +372,7 @@ void model_s::update_model( int symbol )
 	// only contexts, that were actually used to encode
 	// the symbol get their counts updated
 	if ( symbol >= 0 ) {
-		for (int local_order = ( current_order < 0 ) ? 0 : current_order;
+		for (int local_order = ( current_order < 1 ) ? 1 : current_order;
 				local_order <= max_order; local_order++ ) {
 			table_s* context = contexts[ local_order ];
 			unsigned short* counts = context->counts + symbol;
@@ -409,10 +406,10 @@ void model_s::shift_context( int c )
 	
 	// shifting is not possible if max_order is below 1
 	// or context index is negative
-	if ( ( max_order < 1 ) || ( c < 0 ) ) return;
+	if ( ( max_order < 2 ) || ( c < 0 ) ) return;
 	
 	// shift each orders' context
-	for ( i = max_order; i > 0; i-- ) {
+	for ( i = max_order; i > 1; i-- ) {
 		// this is the new current order context
 		context = contexts[ i - 1 ]->links[ c ];
 		
@@ -445,12 +442,12 @@ void model_s::shift_context( int c )
 
 
 /* -----------------------------------------------
-	flushes the whole model by diviging through a specific scale factor
+	flushes the whole model by dividing through a specific scale factor
 	----------------------------------------------- */
 	
 void model_s::flush_model( int scale_factor )
 {
-	recursive_flush( contexts[ 0 ], scale_factor );
+	recursive_flush( contexts[ 1 ], scale_factor );
 }
 
 

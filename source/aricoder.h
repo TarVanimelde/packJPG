@@ -124,7 +124,6 @@ class model_s
 	bool* scoreboard;
 	int sb0_count;
 	table_s **contexts;
-	table_s **storage;
 	
 	int max_symbol;
 	int max_context;
