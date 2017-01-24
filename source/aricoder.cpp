@@ -722,14 +722,12 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	
 	// set up start table
 	table* start_table = new table;
-	start_table->links = new table*[max_context];
-	std::fill_n(start_table->links, max_context, nullptr);
+	start_table->links = std::vector<table*>(max_context);
 	start_table->scale = 0;
 	
 	// build links for start table & null table
 	start_table->lesser = null_table;
-	null_table->links = new table*[max_context];
-	std::fill_n(null_table->links, max_context, start_table);
+	null_table->links = std::vector<table*>(max_context, start_table);
 	
 	// alloc memory for storage & contexts
 	storage = new table*[max_order + 3];
@@ -747,8 +745,7 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 		// build forward and backward links
 		contexts[ i ]->lesser = contexts[ i - 1 ];
 		if ( i < max_order ) {
-			contexts[i]->links = new table*[max_context];
-			std::fill_n(contexts[i]->links, max_context, nullptr);
+			contexts[i]->links = std::vector<table*>(max_context);
 		}
 		contexts[ i - 1 ]->links[ 0 ] = contexts[ i ];
 	}
@@ -769,10 +766,7 @@ model_b::~model_b()
 	recursive_cleanup ( context );
 	
 	// clean up null table
-	context = contexts[ -1 ];	
-	if (context->links != nullptr) {
-		delete[] context->links;
-	}
+	context = contexts[ -1 ];
 	if (context->counts != nullptr) {
 		delete[] context->counts;
 	}
@@ -833,8 +827,7 @@ void model_b::shift_context( int c )
 			// finished here if this is a max order context
 			if ( i < max_order) {
 				// build links to higher order tables otherwise
-				context->links = new table*[max_context];
-				std::fill_n(context->links, max_context, nullptr);
+				context->links = std::vector<table*>(max_context);
 				// add lesser link for higher context (see above)
 				contexts[ i + 1 ]->lesser = context;
 			}
@@ -972,11 +965,11 @@ inline void model_b::rescale_table( table* context, int scale_factor )
 inline void model_b::recursive_flush( table* context, int scale_factor )
 {
 	// go through each link != nullptr
-	if ( context->links != nullptr )
-		for (int  i = 0; i < max_context; i++ )
-			if ( context->links[ i ] != nullptr )
-				recursive_flush( context->links[ i ], scale_factor );
-    
+	for (auto& link : context->links) {
+		if (link != nullptr) {
+			recursive_flush(link, scale_factor);
+		}
+	}
 	// rescale specific table
 	rescale_table( context, scale_factor );
 }
@@ -989,11 +982,10 @@ inline void model_b::recursive_flush( table* context, int scale_factor )
 inline void model_b::recursive_cleanup( table *context )
 {
 	// go through each link != nullptr
-	if ( context->links != nullptr ) {
-		for (int i = 0; i < max_context; i++ )
-			if ( context->links[ i ] != nullptr )
-				recursive_cleanup( context->links[ i ] );
-		delete[] context->links;
+	for (auto& link : context->links) {
+		if (link != nullptr) {
+			recursive_cleanup(link);
+		}
 	}
 	
 	// clean up table	

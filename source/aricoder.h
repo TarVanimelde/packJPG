@@ -28,9 +28,9 @@ struct table {
 	// counts for each symbol contained in the table
 	unsigned short* counts = nullptr;
 	// links to higher order contexts
-	struct table** links = nullptr;
+	std::vector<table*> links;
 	// link to lower order context
-	struct table* lesser = nullptr;
+	table* lesser = nullptr;
 	// accumulated counts
 	unsigned int scale = unsigned int(0);
 };
