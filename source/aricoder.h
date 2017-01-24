@@ -41,9 +41,9 @@ struct table_s {
 	// counts for each symbol contained in the table
 	unsigned short* counts = nullptr;
 	// links to higher order contexts
-	struct table_s** links = nullptr;
+	std::vector<table_s*> links;
 	// link to lower order context
-	struct table_s* lesser = nullptr;
+	table_s* lesser = nullptr;
 	// speedup info
 	unsigned short max_count = unsigned short(0);
 	unsigned short max_symbol = unsigned short(0);
