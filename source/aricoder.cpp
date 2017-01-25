@@ -304,7 +304,6 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	start_table->lesser = null_table;
 	null_table->links = std::vector<table_s*>(max_context, start_table);
 	
-	// alloc memory for storage & contexts
 	contexts = std::vector<table_s*>(max_order + 3);
 	
 	// integrate tables into contexts
@@ -411,7 +410,7 @@ void model_s::shift_context( int c )
 			// finished here if this is a max order context
 			if ( i < max_order ) {
 				// build links to higher order tables otherwise
-				context->links = std::vector<table_s*>(max_context);
+				context->links.resize(max_context);
 				// add lesser link for higher context (see above)
 				contexts[ i + 1 ]->lesser = context;
 			}
@@ -618,7 +617,7 @@ void model_s::totalize_table( table_s *context )
 		totals[ 0 ] = totals[ 1 ] + esc_prob;
 	} else { // if counts are not already set
 		// setup counts for current table
-		context->counts = std::vector<uint16_t>(max_symbol);
+		context->counts.resize(max_symbol);
 		// set totals table -> only escape probability included
 		totals[ 0 ] = 1;
 		totals[ 1 ] = 0;
@@ -720,7 +719,6 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	start_table->lesser = null_table;
 	null_table->links = std::vector<table*>(max_context, start_table);
 	
-	// alloc memory for storage & contexts
 	contexts = std::vector<table*>(max_order + 2);
 	
 	// integrate tables into contexts
@@ -810,7 +808,7 @@ void model_b::shift_context( int c )
 			// finished here if this is a max order context
 			if ( i < max_order) {
 				// build links to higher order tables otherwise
-				context->links = std::vector<table*>(max_context);
+				context->links.resize(max_context);
 				// add lesser link for higher context (see above)
 				contexts[ i + 1 ]->lesser = context;
 			}
