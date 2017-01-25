@@ -1,5 +1,5 @@
-#ifndef aricoder_h
-#define aricoder_h
+#ifndef ARICODER_H
+#define ARICODER_H
 
 #include <cstdint>
 
@@ -17,9 +17,9 @@ constexpr uint32_t ESCAPE_SYMBOL = CODER_LIMIT025;
 
 // symbol struct, used in arithmetic coding
 struct symbol {
-    unsigned int low_count;
-	unsigned int high_count;
-	unsigned int scale;
+	uint32_t low_count;
+	uint32_t high_count;
+	uint32_t scale;
 };
 
 // table struct, used in in statistical models,
@@ -30,7 +30,7 @@ struct table {
 	// links to higher order contexts
 	std::vector<table*> links;
 	// accumulated counts
-	unsigned int scale = unsigned int(0);
+	uint32_t scale = uint32_t(0);
 };
 
 // special table struct, used in in model_s,
@@ -41,8 +41,8 @@ struct table_s {
 	// links to higher order contexts
 	std::vector<table_s*> links;
 	// speedup info
-	unsigned short max_count = unsigned short(0);
-	unsigned short max_symbol = unsigned short(0);
+	uint16_t max_count = uint16_t(0);
+	uint16_t max_symbol = uint16_t(0);
 };
 
 

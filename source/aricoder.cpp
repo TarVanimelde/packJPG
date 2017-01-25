@@ -694,7 +694,7 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	// set up null table
 	table* null_table = new table;
 	null_table->counts = std::vector<uint16_t>(2, uint16_t(1));
-	null_table->scale = 2;
+	null_table->scale = uint32_t(2);
 	
 	// set up start table
 	table* start_table = new table;
@@ -825,7 +825,7 @@ int model_b::convert_int_to_symbol( int c, symbol *s )
 	
 	// return high and low count for current symbol
 	if ( c == 0 ) { // if 0 is to be encoded
-		s->low_count  = 0;
+		s->low_count  = uint32_t(0);
 		s->high_count = context->counts[ 0 ];
 	}
 	else { // if 1 is to be encoded
@@ -864,7 +864,7 @@ int model_b::convert_symbol_to_int( int count, symbol *s )
 	
 	// set up the current symbol
 	if ( count < counts0 ) {
-		s->low_count  = 0;
+		s->low_count  = uint32_t(0);
 		s->high_count = counts0;
 		return 0;
 	}
@@ -889,7 +889,7 @@ inline void model_b::check_counts( table *context )
 		// setup counts for current table
 		counts.resize(2, uint16_t(1));
 		// set scale
-		context->scale = 2;
+		context->scale = uint32_t(2);
 	}
 }
 
