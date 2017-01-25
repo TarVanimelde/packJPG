@@ -296,9 +296,6 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	// set up start table
 	table_s* start_table = new table_s;
 	start_table->links = std::vector<table_s*>(max_context);
-	// set up internal counts
-	start_table->max_count = 0;
-	start_table->max_symbol = 0;
 	
 	// build links for null table
 	null_table->links = std::vector<table_s*>(max_context, start_table);
@@ -313,8 +310,6 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	for (int i = 2; i <= max_order; i++ ) {
 		// set up current order table
 		contexts[i] = new table_s;
-		contexts[ i ]->max_count  = 0;
-		contexts[ i ]->max_symbol = 0;
 		// build forward links
 		if ( i < max_order ) {
 			contexts[i]->links = std::vector<table_s*>(max_context);
@@ -399,10 +394,7 @@ void model_s::shift_context( int c )
 		// check if context exists, build if needed
 		if ( context == nullptr ) {
 			// reserve memory for next table_s
-			context = new table_s;		
-			// setup internal counts
-			context->max_count  = 0;
-			context->max_symbol = 0;
+			context = new table_s;
 			// finished here if this is a max order context
 			if ( i < max_order ) {
 				// build links to higher order tables otherwise
@@ -707,7 +699,6 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	// set up start table
 	table* start_table = new table;
 	start_table->links = std::vector<table*>(max_context);
-	start_table->scale = 0;
 	
 	// build links for start table & null table
 	null_table->links = std::vector<table*>(max_context, start_table);
@@ -722,7 +713,6 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	for (int i = 2; i <= max_order; i++ ) {
 		// set up current order table
 		contexts[i] = new table;
-		contexts[ i ]->scale = 0;
 		// build forward links
 		if ( i < max_order ) {
 			contexts[i]->links = std::vector<table*>(max_context);
@@ -794,7 +784,6 @@ void model_b::shift_context( int c )
 		if ( context == nullptr ) {
 			// reserve memory for next table
 			context = new table;		
-			context->scale  = 0;
 			// finished here if this is a max order context
 			if ( i < max_order) {
 				// build links to higher order tables otherwise
