@@ -187,8 +187,8 @@ static void shift_model(M model, C context, Cargs ... contextList) {
 	----------------------------------------------- */
 static inline void encode_ari( aricoder* encoder, model_s* model, int c )
 {
-	static symbol s;
-	static int esc;
+	symbol s;
+	int esc;
 	
 	do {		
 		esc = model->convert_int_to_symbol( c, &s );
@@ -202,9 +202,9 @@ static inline void encode_ari( aricoder* encoder, model_s* model, int c )
 	----------------------------------------------- */	
 static inline int decode_ari( aricoder* decoder, model_s* model )
 {
-	static symbol s;
-	static unsigned int count;
-	static int c;
+	symbol s;
+	uint32_t count;
+	int c;
 	
 	do{
 		model->get_symbol_scale( &s );
@@ -222,7 +222,7 @@ static inline int decode_ari( aricoder* decoder, model_s* model )
 	----------------------------------------------- */	
 static inline void encode_ari( aricoder* encoder, model_b* model, int c )
 {
-	static symbol s;
+	symbol s;
 	
 	model->convert_int_to_symbol( c, &s );
 	encoder->encode( &s );
@@ -234,13 +234,11 @@ static inline void encode_ari( aricoder* encoder, model_b* model, int c )
 	----------------------------------------------- */	
 static inline int decode_ari( aricoder* decoder, model_b* model )
 {
-	static symbol s;
-	static unsigned int count;
-	static int c;
+	symbol s;
 	
 	model->get_symbol_scale( &s );
-	count = decoder->decode_count( &s );
-	c = model->convert_symbol_to_int( count, &s );
+	uint32_t count = decoder->decode_count( &s );
+	int c = model->convert_symbol_to_int( count, &s );
 	decoder->decode( &s );	
 	model->update_model( c );
 	

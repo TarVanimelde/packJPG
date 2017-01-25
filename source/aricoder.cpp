@@ -661,7 +661,6 @@ inline void model_s::rescale_table( table_s* context, int scale_factor )
 	
 inline void model_s::recursive_flush( table_s* context, int scale_factor )
 {
-	// go through each link != nullptr
 	for (auto& link : context->links) {
 		if (link != nullptr) {
 			recursive_flush(link, scale_factor);
@@ -943,7 +942,6 @@ inline void model_b::rescale_table( table* context, int scale_factor )
 	
 inline void model_b::recursive_flush( table* context, int scale_factor )
 {
-	// go through each link != nullptr
 	for (auto& link : context->links) {
 		if (link != nullptr) {
 			recursive_flush(link, scale_factor);
@@ -960,7 +958,6 @@ inline void model_b::recursive_flush( table* context, int scale_factor )
 	
 inline void model_b::recursive_cleanup( table *context )
 {
-	// go through each link != nullptr
 	for (auto& link : context->links) {
 		if (link != nullptr) {
 			recursive_cleanup(link);
