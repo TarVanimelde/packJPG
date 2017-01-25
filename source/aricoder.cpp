@@ -324,16 +324,12 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	----------------------------------------------- */
 
 model_s::~model_s()
-{
-	table_s* context;
-	
+{	
 	// clean up each 'normal' table
-	context = contexts[1];
-	recursive_cleanup ( context );
+	recursive_cleanup(contexts[1]);
 	
 	// clean up null table
-	context = contexts[0];
-	delete context;
+	delete contexts[0];
 	
 	// free everything else
 	delete[] scoreboard;
@@ -728,16 +724,11 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	
 model_b::~model_b()
 {
-	table* context;
-	
-	
 	// clean up each 'normal' table
-	context = contexts[ 1 ];
-	recursive_cleanup ( context );
+	recursive_cleanup(contexts[1]);
 	
 	// clean up null table
-	context = contexts[ 0];
-	delete context;
+	delete[] contexts[0];
 }
 
 
