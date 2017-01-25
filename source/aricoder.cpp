@@ -349,13 +349,11 @@ model_s::~model_s()
 
 
 /* -----------------------------------------------
-	updates statistics for a specific symbol / resets to highest order
+	Updates statistics for a specific symbol / resets to highest order.
+	Use -1 if you just want to reset without updating statistics.
 	----------------------------------------------- */
-
 void model_s::update_model( int symbol )
-{
-	// use -1 if you just want to reset without updating statistics
-		
+{		
 	// only contexts, that were actually used to encode
 	// the symbol get its count updated
 	if ( symbol >= 0 ) {
@@ -366,12 +364,13 @@ void model_s::update_model( int symbol )
 			// update count for specific symbol & scale
 			count++;
 			// store side information for totalize_table
-			if ( count > context->max_count ) context->max_count = count;
-			if ( symbol >= context->max_symbol ) context->max_symbol = symbol+1;
+			context->max_count = std::max(count, context->max_count);
+			context->max_symbol = std::max(uint16_t(symbol + 1), context->max_symbol);
 			// if count for that symbol have gone above the maximum count
 			// the table has to be resized (scale factor 2)
-			if ( count >= max_count )
-				rescale_table( context, 1 );
+			if (count == max_count) {
+				rescale_table(context, 1);
+			}
 		}
 	}
 	
