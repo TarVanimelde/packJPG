@@ -728,7 +728,7 @@ model_b::~model_b()
 	recursive_cleanup(contexts[1]);
 	
 	// clean up null table
-	delete[] contexts[0];
+	delete contexts[0];
 }
 
 
