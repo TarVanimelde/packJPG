@@ -572,49 +572,44 @@ void model_s::totalize_table( table_s *context )
 	
 	// accumulated counts must never exceed CODER_MAXSCALE
 	// as CODER_MAXSCALE is big enough, though, (2^29), this shouldn't happen and is not checked
-
-	signed int      local_symb;
-	unsigned int    curr_total;
-	unsigned int    curr_count;
-	unsigned int    esc_prob;
-	int i;
 	
-	// make a local copy of the pointer
-	auto& counts = context->counts;
+	const auto& counts = context->counts;
 	
 	// check counts
-	if ( !counts.empty() ) {	// if counts are already set
+	if (!counts.empty()) {	// if counts are already set
 		// locally store current fill/symbol count
-		local_symb = sb0_count;
-		
-		// set the last symbol of the totals table_s zero
-		i = context->max_symbol - 1;
-		totals[ i + 2 ]	= 0;
+		int local_symb = sb0_count;
+
+		// set the last symbol of the totals to zero
+		int i = context->max_symbol - 1;
+		totals[i + 2] = 0;
+
 		// (re)set current total
-		curr_total = 0;
-		
+		uint32_t curr_total = 0;
+
 		// go reverse though the whole counts table and accumulate counts
 		// leave space at the beginning of the table for the escape symbol
-		for ( ; i >= 0; i-- ) {			
+		for (; i >= 0; i--) {
 			// only count probability if the current symbol is not 'scoreboard - excluded'
-			if ( !scoreboard[ i ] ) {
-				curr_count = counts[ i ];
-				if ( curr_count > 0 ) {
+			if (!scoreboard[i]) {
+				uint16_t curr_count = counts[i];
+				if (curr_count > 0) {
 					// add counts for the current symbol
-					curr_total = curr_total + curr_count;
+					curr_total += curr_count;
 					// exclude symbol from scoreboard
-					scoreboard[ i ] = true;
+					scoreboard[i] = true;
 					sb0_count--;
 				}
 			}
-			totals[ i + 1 ] = curr_total;
-		}		
+			totals[i + 1] = curr_total;
+		}
 		// here the escape calculation needs to take place
-		if ( local_symb == sb0_count )
+		uint32_t esc_prob;
+		if (local_symb == sb0_count) {
 			esc_prob = 1;
-		else if ( sb0_count == 0 )
+		} else if (sb0_count == 0) {
 			esc_prob = 0;
-		else {
+		} else {
 			// esc_prob = 1;
 			esc_prob  =  sb0_count * ( local_symb - sb0_count );
 			esc_prob /= ( local_symb * context->max_count );
@@ -622,8 +617,7 @@ void model_s::totalize_table( table_s *context )
 		}
 		// include escape probability in totals table
 		totals[ 0 ] = totals[ 1 ] + esc_prob;
-	}
-	else { // if counts are not already set
+	} else { // if counts are not already set
 		// setup counts for current table
 		context->counts = std::vector<uint16_t>(max_symbol);
 		// set totals table -> only escape probability included
@@ -640,13 +634,13 @@ void model_s::totalize_table( table_s *context )
 inline void model_s::rescale_table( table_s* context, int scale_factor )
 {
 	auto& counts = context->counts;
-	int lst_symbol = context->max_symbol;
-	int i;
 	
 	// return now if counts not set
 	if ( counts.empty() ) return;
 	
 	// now scale the table by bitshifting each count
+	int lst_symbol = context->max_symbol;
+	int i;
 	for ( i = 0; i < lst_symbol; i++ ) {
 		//if ( counts[ i ] > 0 ) // Unnecessary check since counts is an unsigned type.
 			counts[ i ] >>= scale_factor;
