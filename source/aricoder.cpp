@@ -300,8 +300,7 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 	start_table->max_count = 0;
 	start_table->max_symbol = 0;
 	
-	// build links for start table & null table
-	start_table->lesser = null_table;
+	// build links for null table
 	null_table->links = std::vector<table_s*>(max_context, start_table);
 	
 	contexts = std::vector<table_s*>(max_order + 3);
@@ -316,8 +315,7 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
 		contexts[i] = new table_s;
 		contexts[ i ]->max_count  = 0;
 		contexts[ i ]->max_symbol = 0;
-		// build forward and backward links
-		contexts[ i ]->lesser = contexts[ i - 1 ];
+		// build forward links
 		if ( i < max_order ) {
 			contexts[i]->links = std::vector<table_s*>(max_context);
 		}
@@ -405,14 +403,10 @@ void model_s::shift_context( int c )
 			// setup internal counts
 			context->max_count  = 0;
 			context->max_symbol = 0;
-			// link lesser context later if not existing, this is done below
-			context->lesser = contexts[ i - 2 ]->links[ c ];
 			// finished here if this is a max order context
 			if ( i < max_order ) {
 				// build links to higher order tables otherwise
 				context->links.resize(max_context);
-				// add lesser link for higher context (see above)
-				contexts[ i + 1 ]->lesser = context;
 			}
 			// put context to its right place
 			contexts[ i - 1 ]->links[ c ] = context;
@@ -716,7 +710,6 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 	start_table->scale = 0;
 	
 	// build links for start table & null table
-	start_table->lesser = null_table;
 	null_table->links = std::vector<table*>(max_context, start_table);
 	
 	contexts = std::vector<table*>(max_order + 2);
@@ -730,8 +723,7 @@ model_b::model_b( int max_c, int max_o, int c_lim )
 		// set up current order table
 		contexts[i] = new table;
 		contexts[ i ]->scale = 0;
-		// build forward and backward links
-		contexts[ i ]->lesser = contexts[ i - 1 ];
+		// build forward links
 		if ( i < max_order ) {
 			contexts[i]->links = std::vector<table*>(max_context);
 		}
@@ -802,15 +794,11 @@ void model_b::shift_context( int c )
 		if ( context == nullptr ) {
 			// reserve memory for next table
 			context = new table;		
-			context->scale  = 0;	
-			// link lesser context later if not existing, this is done below
-			context->lesser = contexts[ i - 2 ]->links[ c ];
+			context->scale  = 0;
 			// finished here if this is a max order context
 			if ( i < max_order) {
 				// build links to higher order tables otherwise
 				context->links.resize(max_context);
-				// add lesser link for higher context (see above)
-				contexts[ i + 1 ]->lesser = context;
 			}
 			// put context to its right place
 			contexts[ i - 1 ]->links[ c ] = context;

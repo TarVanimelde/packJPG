@@ -29,8 +29,6 @@ struct table {
 	std::vector<uint16_t> counts;
 	// links to higher order contexts
 	std::vector<table*> links;
-	// link to lower order context
-	table* lesser = nullptr;
 	// accumulated counts
 	unsigned int scale = unsigned int(0);
 };
@@ -42,8 +40,6 @@ struct table_s {
 	std::vector<uint16_t> counts;
 	// links to higher order contexts
 	std::vector<table_s*> links;
-	// link to lower order context
-	table_s* lesser = nullptr;
 	// speedup info
 	unsigned short max_count = unsigned short(0);
 	unsigned short max_symbol = unsigned short(0);
