@@ -235,34 +235,32 @@ unsigned char aricoder::read_bit()
 
 /* -----------------------------------------------
 	universal statistical model for arithmetic coding
+	
+	boundaries of this model:
+	max_s (maximum symbol) -> 1 <= max_s <= 1024 (???)
+	max_c (maximum context) -> 1 <= max_c <= 1024 (???)
+	max_o (maximum order) -> -1 <= max_o <= 4
+	c_lim (maximum count) -> 2 <= c_lim <= 4096 (???)
+	WARNING: this can be memory intensive, so don't overdo it
+	max_s == 256; max_c == 256; max_o == 4 would be way too much
 	----------------------------------------------- */
 	
-model_s::model_s( int max_s, int max_c, int max_o, int c_lim )
+model_s::model_s( int max_s, int max_c, int max_o, int c_lim ) :
+		// Copy settings into the model:
+		max_symbol(max_s),
+		max_context(max_c),
+		max_order(max_o + 1),
+		max_count(c_lim),
+
+		sb0_count(max_s),
+		current_order(max_o + 1)
 {
-	// boundaries of this model:
-	// max_s (maximum symbol) -> 1 <= max_s <= 1024 (???)
-	// max_c (maximum context) -> 1 <= max_c <= 1024 (???)
-	// max_o (maximum order) -> -1 <= max_o <= 4
-	// c_lim (maximum count) -> 2 <= c_lim <= 4096 (???)
-	// WARNING: this can be memory intensive, so don't overdo it
-	// max_s == 256; max_c == 256; max_o == 4 would be way too much
-	
-	// copy settings into model
-	max_symbol  = max_s;
-	max_context = max_c;
-	max_order   = max_o + 1;
-	max_count   = c_lim;
-	
 	// alloc memory for totals table
 	totals = std::vector<uint32_t>(max_symbol + 2);
 	
 	// alloc memory for scoreboard, set sb0_count
 	scoreboard = new bool[max_symbol];
 	std::fill(scoreboard, scoreboard + max_symbol, false);
-	sb0_count = max_symbol;
-	
-	// set current order
-	current_order = max_order;
 	
 	// set up null table
 	table_s* null_table = new table_s;
@@ -652,20 +650,19 @@ inline void model_s::recursive_cleanup( table_s *context )
 
 /* -----------------------------------------------
 	special version of model_s for binary coding
+	
+	boundaries of this model:
+	... (maximum symbol) -> 2 (0 or 1 )
+	max_c (maximum context) -> 1 <= max_c <= 1024 (???)
+	max_o (maximum order) -> -1 <= max_o <= 4
 	----------------------------------------------- */
 
-model_b::model_b( int max_c, int max_o, int c_lim )
+model_b::model_b( int max_c, int max_o, int c_lim ) :
+		// Copy settings into the model:
+		max_context(max_c),
+		max_order(max_o + 1),
+		max_count(c_lim)
 {
-	// boundaries of this model:
-	// ... (maximum symbol) -> 2 (0 or 1 )
-	// max_c (maximum context) -> 1 <= max_c <= 1024 (???)
-	// max_o (maximum order) -> -1 <= max_o <= 4
-	
-	// copy settings into model
-	max_context = max_c;
-	max_order   = max_o + 1;
-	max_count   = c_lim;
-	
 	// set up null table
 	table* null_table = new table;
 	null_table->counts = std::vector<uint16_t>(2, uint16_t(1));

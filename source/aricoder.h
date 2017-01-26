@@ -115,22 +115,23 @@ class model_s
 	int  convert_symbol_to_int( int count, symbol *s );
 	
 	private:
+
+	inline void totalize_table(table_s* context);
+	inline void rescale_table(table_s* context, int scale_factor);
+	inline void recursive_flush(table_s* context, int scale_factor);
+	inline void recursive_cleanup(table_s* context);
+
+	const int max_symbol;
+	const int max_context;
+	const int max_order;
+	const int max_count;
+
+	int current_order;
+	int sb0_count;
 	
 	std::vector<uint32_t> totals;
 	bool* scoreboard;
-	int sb0_count;
 	std::vector<table_s*> contexts;
-	
-	int max_symbol;
-	int max_context;
-	int current_order;
-	int max_order;
-	int max_count;
-	
-	inline void totalize_table(table_s* context );
-	inline void rescale_table(table_s* context, int scale_factor );
-	inline void recursive_flush(table_s* context, int scale_factor );
-	inline void recursive_cleanup(table_s* context );
 };
 
 
@@ -154,17 +155,17 @@ class model_b
 	int  convert_symbol_to_int( int count, symbol *s );	
 	
 	private:
+
+	inline void check_counts(table *context);
+	inline void rescale_table(table* context, int scale_factor);
+	inline void recursive_flush(table* context, int scale_factor);
+	inline void recursive_cleanup(table *context);
+
+	const int max_context;
+	const int max_order;
+	const int max_count;
 	
 	std::vector<table*> contexts;
-	
-	int max_context;
-	int max_order;
-	int max_count;
-	
-	inline void check_counts( table *context );
-	inline void rescale_table( table* context, int scale_factor );
-	inline void recursive_flush( table* context, int scale_factor );
-	inline void recursive_cleanup( table *context );
 };
 
 // Base case for shifting an arbitrary number of contexts into the model.
