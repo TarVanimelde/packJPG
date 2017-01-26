@@ -3279,7 +3279,7 @@ INTERN bool pack_pjg( void )
 	
 	
 	// init arithmetic compression
-	encoder = new aricoder( str_out, 1 );
+	encoder = new aricoder(str_out, StreamMode::kWrite);
 	
 	// discard meta information from header if option set
 	if ( disc_meta )
@@ -3416,7 +3416,7 @@ INTERN bool unpack_pjg( void )
 	
 	
 	// init arithmetic compression
-	decoder = new aricoder( str_in, 0 );
+	decoder = new aricoder(str_in, StreamMode::kRead);
 	
 	// decode JPG header
 	if ( !pjg_decode_generic( decoder, &hdrdata, &hdrs ) ) return false;

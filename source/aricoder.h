@@ -53,7 +53,7 @@ struct table_s {
 class aricoder
 {
 	public:
-	aricoder( iostream* stream, int iomode );
+	aricoder( iostream* stream, StreamMode iomode );
 	~aricoder();
 	void encode( symbol* s );
 	unsigned int decode_count( symbol* s );
@@ -80,17 +80,17 @@ class aricoder
 	unsigned char read_bit();
 	
 	// i/o variables
-	iostream* sptr;
-	int mode;
-	unsigned char bbyte;
-	unsigned char cbit;
+	iostream* sptr; // Pointer to iostream for reading/writing.
+	const StreamMode mode;
+	unsigned char bbyte = 0;
+	unsigned char cbit = 0;
 	
 	// arithmetic coding variables
-	unsigned int ccode;
-	unsigned int clow;
-	unsigned int chigh;
-	unsigned int cstep;
-	unsigned int nrbits;
+	unsigned int ccode = 0;
+	unsigned int clow = 0;
+	unsigned int chigh = CODER_LIMIT100 - 1;
+	unsigned int cstep = 0;
+	unsigned int nrbits = 0;
 };
 
 

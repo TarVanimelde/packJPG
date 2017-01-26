@@ -10,32 +10,11 @@
 	constructor for aricoder class
 	----------------------------------------------- */
 
-aricoder::aricoder( iostream* stream, int iomode )
-{	
-	// iomode (i/o mode)
-	// 0 -> reading
-	// 1 -> writing
-	
-	int i;
-	
-	// set initial values
-	ccode	= 0;
-	clow	= 0;
-	chigh	= CODER_LIMIT100 - 1;
-	cstep	= 0;
-	bbyte	= 0;
-	cbit	= 0;
-	nrbits	= 0;
-	
-	// store pointer to iostream for reading/writing
-	sptr = stream;
-	
-	// store i/o mode
-	mode = iomode;
-	
-	if ( mode == 0 ) { // mode is reading / decoding
+aricoder::aricoder( iostream* stream, StreamMode iomode ) : sptr(stream), mode(iomode)
+{
+	if ( mode == StreamMode::kRead) { // mode is reading / decoding
 		// code buffer has to be filled before starting decoding
-		for ( i = 0; i < CODER_USE_BITS; i++ )
+		for (int i = 0; i < CODER_USE_BITS; i++ )
 			ccode = ( ccode << 1 ) | read_bit();
 	} // mode is writing / encoding otherwise
 }
@@ -46,7 +25,7 @@ aricoder::aricoder( iostream* stream, int iomode )
 
 aricoder::~aricoder()
 {
-	if ( mode == 1 ) { // mode is writing / encoding
+	if ( mode == StreamMode::kWrite) { // mode is writing / encoding
 		// due to clow < CODER_LIMIT050, and chigh >= CODER_LIMIT050
 		// there are only two possible cases
 		if ( clow < CODER_LIMIT025 ) { // case a.) 
