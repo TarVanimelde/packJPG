@@ -112,7 +112,7 @@ class model_s
 	
 	int  convert_int_to_symbol( int c, symbol *s );
 	void get_symbol_scale( symbol *s );
-	int  convert_symbol_to_int( int count, symbol *s );
+	int  convert_symbol_to_int(uint32_t count, symbol *s);
 	
 	private:
 
@@ -152,7 +152,7 @@ class model_b
 	
 	int  convert_int_to_symbol( int c, symbol *s );
 	void get_symbol_scale( symbol *s );
-	int  convert_symbol_to_int( int count, symbol *s );	
+	int  convert_symbol_to_int(uint32_t count, symbol *s);	
 	
 	private:
 

@@ -495,7 +495,7 @@ void model_s::get_symbol_scale( symbol *s )
 	converts a count to an int, called after get_symbol_scale
 	----------------------------------------------- */
 	
-int model_s::convert_symbol_to_int(int count, symbol *s)
+int model_s::convert_symbol_to_int(uint32_t count, symbol *s)
 {
 	// seek the symbol that matches the count,
 	// also, set low- and high count for the symbol - it has to be removed from the stream
@@ -503,7 +503,7 @@ int model_s::convert_symbol_to_int(int count, symbol *s)
 
 	// go through the totals table, search the symbol that matches the count
 	int c;
-	for (c = 1; count < (signed) totals[c]; c++);	
+	for (c = 1; count < totals[c]; c++);	
 	// set up the current symbol
 	s->low_count = totals[c]; // It is guaranteed that there exists such a symbol.
 	s->high_count = totals[c - 1]; // This is guaranteed to not go out of bounds since the search started at index 1 of totals.
@@ -824,10 +824,10 @@ void model_b::get_symbol_scale( symbol *s )
 	converts a count to an int, called after get_symbol_scale
 	----------------------------------------------- */
 	
-int model_b::convert_symbol_to_int( int count, symbol *s )
+int model_b::convert_symbol_to_int(uint32_t count, symbol *s)
 {
 	table* context = contexts[ max_order ];
-	unsigned short counts0 = context->counts[ 0 ];
+	auto counts0 = context->counts[ 0 ];
 	
 	// set up the current symbol
 	if ( count < counts0 ) {
