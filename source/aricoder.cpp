@@ -257,7 +257,7 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim ) :
 
 		totals(max_s + 2),
 		scoreboard(new bool[max_s]),
-		contexts(max_o + 2)
+		contexts(max_o + 3)
 {
 	std::fill(scoreboard, scoreboard + max_symbol, false);
 	
@@ -300,9 +300,10 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim ) :
 model_s::~model_s()
 {	
 	// clean up each 'normal' table
-	recursive_cleanup(contexts[1]);
+	delete contexts[1];
 	
 	// clean up null table
+	contexts[0]->links.clear(); // Don't delete the already-deleted links again!
 	delete contexts[0];
 	
 	// free everything else
@@ -331,7 +332,7 @@ void model_s::update_model( int symbol )
 			// if count for that symbol have gone above the maximum count
 			// the table has to be resized (scale factor 2)
 			if (count == max_count) {
-				rescale_table(context, 1);
+				context->rescale_table(1);
 			}
 		}
 	}
@@ -383,7 +384,7 @@ void model_s::shift_context( int c )
 	
 void model_s::flush_model( int scale_factor )
 {
-	recursive_flush( contexts[ 1 ], scale_factor );
+	contexts[1]->recursive_flush(scale_factor);
 }
 
 
@@ -574,71 +575,6 @@ void model_s::totalize_table( table_s *context )
 	}	
 }
 
-
-/* -----------------------------------------------
-	resizes one table by bitshifting each count using a specific value
-	----------------------------------------------- */
-	
-inline void model_s::rescale_table( table_s* context, int scale_factor )
-{
-	auto& counts = context->counts;
-	
-	// return now if counts not set
-	if ( counts.empty() ) return;
-	
-	// now scale the table by bitshifting each count
-	int lst_symbol = context->max_symbol;
-	int i;
-	for ( i = 0; i < lst_symbol; i++ ) {
-		//if ( counts[ i ] > 0 ) // Unnecessary check since counts is an unsigned type.
-			counts[ i ] >>= scale_factor;
-	}
-		
-	// also rescale tables max count
-	context->max_count >>= scale_factor;
-	
-	// seek for new last symbol
-	for ( i = lst_symbol - 1; i >= 0; i-- )
-		if ( counts[ i ] > 0 ) break;
-	context->max_symbol = i + 1;
-}
-
-
-/* -----------------------------------------------
-	a recursive function to go through each context and rescale the counts
-	----------------------------------------------- */
-	
-inline void model_s::recursive_flush( table_s* context, int scale_factor )
-{
-	for (auto& link : context->links) {
-		if (link != nullptr) {
-			recursive_flush(link, scale_factor);
-		}
-	}
-    
-	// rescale specific table
-	rescale_table( context, scale_factor );
-}
-
-
-/* -----------------------------------------------
-	frees all memory for all contexts starting at a given table_s
-	----------------------------------------------- */
-
-inline void model_s::recursive_cleanup( table_s *context )
-{
-	// be careful not to cut any link too early!
-	for (auto& link : context->links) {
-		if (link != nullptr) {
-			recursive_cleanup(link);
-		}
-	}
-
-	// clean up table	
-	delete context;
-}
-
-
 /* -----------------------------------------------
 	special version of model_s for binary coding
 	
@@ -654,7 +590,7 @@ model_b::model_b( int max_c, int max_o, int c_lim ) :
 		max_order(max_o + 1),
 		max_count(c_lim),
 
-		contexts(max_o + 2)
+		contexts(max_o + 3)
 {
 	// set up null table
 	table* null_table = new table;
@@ -692,9 +628,10 @@ model_b::model_b( int max_c, int max_o, int c_lim ) :
 model_b::~model_b()
 {
 	// clean up each 'normal' table
-	recursive_cleanup(contexts[1]);
+	delete contexts[1];
 	
 	// clean up null table
+	contexts[0]->links.clear(); // Don't delete the already-deleted links again!
 	delete contexts[0];
 }
 
@@ -718,7 +655,7 @@ void model_b::update_model( int symbol )
 		// if counts for that symbol have gone above the maximum count
 		// the table has to be resized (scale factor 2)
 		if ( context->counts[ symbol ] >= max_count )
-			rescale_table( context, 1 );
+			context->rescale_table(1);
 	}
 }
 
@@ -763,7 +700,7 @@ void model_b::shift_context( int c )
 	
 void model_b::flush_model( int scale_factor )
 {
-	recursive_flush( contexts[ 1 ], scale_factor );
+	contexts[1]->recursive_flush(scale_factor);
 }
 
 
@@ -776,7 +713,7 @@ int model_b::convert_int_to_symbol( int c, symbol *s )
 	table* context = contexts[ max_order ];
 	
 	// check if counts are available
-	check_counts( context );
+	context->check_counts();
 	
 	// finding the scale is easy
 	s->scale = context->scale;
@@ -804,7 +741,7 @@ void model_b::get_symbol_scale( symbol *s )
 	table* context = contexts[ max_order ];
 	
 	// check if counts are available
-	check_counts( context );
+	context->check_counts();
 	
 	// getting the scale is easy
 	s->scale = context->scale;
@@ -831,72 +768,4 @@ int model_b::convert_symbol_to_int(uint32_t count, symbol *s)
 		s->high_count = s->scale;
 		return 1;
 	}
-}
-
-
-/* -----------------------------------------------
-	this function checks if counts exist, and, if they exist and are below max
-	----------------------------------------------- */
-	
-inline void model_b::check_counts( table *context )
-{
-	auto& counts = context->counts;
-	
-	// check if counts are available
-	if ( counts.empty() ) {
-		// setup counts for current table
-		counts.resize(2, uint16_t(1));
-		// set scale
-		context->scale = uint32_t(2);
-	}
-}
-
-
-/* -----------------------------------------------
-	resizes one table by bitshifting each count using a specific value
-	----------------------------------------------- */
-	
-inline void model_b::rescale_table( table* context, int scale_factor )
-{
-	auto& counts = context->counts;
-	// Do nothing if counts is not set:
-	if (!counts.empty()) {
-		// Scale the table by bitshifting each count, be careful not to set any count zero:
-		counts[0] = std::max(uint16_t(1), uint16_t(counts[0] >> scale_factor));
-		counts[1] = std::max(uint16_t(1), uint16_t(counts[1] >> scale_factor));
-		context->scale = counts[0] + counts[1];
-	}
-}
-
-
-/* -----------------------------------------------
-	a recursive function to go through each context and rescale the counts
-	----------------------------------------------- */
-	
-inline void model_b::recursive_flush( table* context, int scale_factor )
-{
-	for (auto& link : context->links) {
-		if (link != nullptr) {
-			recursive_flush(link, scale_factor);
-		}
-	}
-	// rescale specific table
-	rescale_table( context, scale_factor );
-}
-
-
-/* -----------------------------------------------
-	frees all memory for all contexts starting at a given table
-	----------------------------------------------- */
-	
-inline void model_b::recursive_cleanup( table *context )
-{
-	for (auto& link : context->links) {
-		if (link != nullptr) {
-			recursive_cleanup(link);
-		}
-	}
-	
-	// clean up table
-	delete context;
 }

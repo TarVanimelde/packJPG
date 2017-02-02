@@ -5,6 +5,7 @@
 
 #include "bitops.h"
 #include <vector>
+#include <algorithm>
 
 // defines for coder
 constexpr uint32_t CODER_USE_BITS = 31; // Must never be above 31.
@@ -31,6 +32,56 @@ struct table {
 	std::vector<table*> links;
 	// accumulated counts
 	uint32_t scale = uint32_t(0);
+
+	/* -----------------------------------------------
+	Deletes all contexts starting at a given table.
+	----------------------------------------------- */
+	~table() {
+		for (auto& link : links) {
+			if (link != nullptr) {
+				delete link;
+			}
+		}
+	}
+
+	/* -----------------------------------------------
+	Checks if counts exist, creating them if they do not.
+	----------------------------------------------- */
+	inline void check_counts() {
+		// check if counts are available
+		if (counts.empty()) {
+			// setup counts for current table
+			counts.resize(2, uint16_t(1));
+			// set scale
+			scale = uint32_t(2);
+		}
+	}
+
+	/* -----------------------------------------------
+	Resizes one table by rightshifting each count using a specific value.
+	----------------------------------------------- */
+	inline void rescale_table(int scale_factor) {
+		// Do nothing if counts is not set:
+		if (!counts.empty()) {
+			// Scale the table by bitshifting each count, be careful not to set any count zero:
+			counts[0] = std::max(uint16_t(1), uint16_t(counts[0] >> scale_factor));
+			counts[1] = std::max(uint16_t(1), uint16_t(counts[1] >> scale_factor));
+			scale = counts[0] + counts[1];
+		}
+	}
+
+	/* -----------------------------------------------
+	Recursively rescales the counts in each link by the given factor.
+	----------------------------------------------- */
+	inline void recursive_flush(int scale_factor) {
+		for (auto& link : links) {
+			if (link != nullptr) {
+				link->recursive_flush(scale_factor);
+			}
+		}
+		// rescale specific table
+		rescale_table(scale_factor);
+	}
 };
 
 // special table struct, used in in model_s,
@@ -43,6 +94,55 @@ struct table_s {
 	// speedup info
 	uint16_t max_count = uint16_t(0);
 	uint16_t max_symbol = uint16_t(0);
+
+	/* -----------------------------------------------
+	Deletes all contexts starting at a given table_s.
+	----------------------------------------------- */
+	~table_s() {
+		for (auto& link : links) {
+			if (link != nullptr) {
+				delete link;
+			}
+		}
+	}
+
+	/* -----------------------------------------------
+	Resizes the table by rightshifting each count by scale_factor.
+	----------------------------------------------- */
+	inline void rescale_table(int scale_factor) {
+		// return now if counts not set
+		if (counts.empty()) return;
+
+		// now scale the table by bitshifting each count
+		int lst_symbol = max_symbol;
+		int i;
+		for (i = 0; i < lst_symbol; i++) {
+			//if ( counts[ i ] > 0 ) // Unnecessary check since counts is an unsigned type.
+			counts[i] >>= scale_factor;
+		}
+
+		// also rescale tables max count
+		max_count >>= scale_factor;
+
+		// seek for new last symbol
+		for (i = lst_symbol - 1; i >= 0; i--)
+			if (counts[i] > 0) break;
+		max_symbol = i + 1;
+	}
+
+	/* -----------------------------------------------
+	A recursive function that goes through each linked context and rescales the counts.
+	----------------------------------------------- */
+	inline void recursive_flush(int scale_factor) {
+		for (auto& link : links) {
+			if (link != nullptr) {
+				link->recursive_flush(scale_factor);
+			}
+		}
+
+		// rescale specific table
+		rescale_table(scale_factor);
+	}
 };
 
 
@@ -117,9 +217,6 @@ class model_s
 	private:
 
 	inline void totalize_table(table_s* context);
-	inline void rescale_table(table_s* context, int scale_factor);
-	inline void recursive_flush(table_s* context, int scale_factor);
-	inline void recursive_cleanup(table_s* context);
 
 	const int max_symbol;
 	const int max_context;
@@ -155,12 +252,7 @@ class model_b
 	int  convert_symbol_to_int(uint32_t count, symbol *s);	
 	
 	private:
-
-	inline void check_counts(table *context);
-	inline void rescale_table(table* context, int scale_factor);
-	inline void recursive_flush(table* context, int scale_factor);
-	inline void recursive_cleanup(table *context);
-
+	
 	const int max_context;
 	const int max_order;
 	const int max_count;
