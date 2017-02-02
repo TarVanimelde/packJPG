@@ -170,7 +170,7 @@ class model_b
 
 // Base case for shifting an arbitrary number of contexts into the model.
 template <typename M>
-static void shift_model(M model) {}
+static void shift_model(M) {}
 
 // Shift an arbitrary number of contexts into the model (at most max_c contexts).
 template <typename M, typename C, typename... Cargs>

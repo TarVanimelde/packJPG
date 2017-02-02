@@ -252,8 +252,8 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim ) :
 		max_order(max_o + 1),
 		max_count(c_lim),
 
-		sb0_count(max_s),
-		current_order(max_o + 1)
+		current_order(max_o + 1),
+		sb0_count(max_s)
 {
 	// alloc memory for totals table
 	totals = std::vector<uint32_t>(max_symbol + 2);
