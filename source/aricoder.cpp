@@ -253,13 +253,12 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim ) :
 		max_count(c_lim),
 
 		current_order(max_o + 1),
-		sb0_count(max_s)
+		sb0_count(max_s),
+
+		totals(max_s + 2),
+		scoreboard(new bool[max_s]),
+		contexts(max_o + 2)
 {
-	// alloc memory for totals table
-	totals = std::vector<uint32_t>(max_symbol + 2);
-	
-	// alloc memory for scoreboard, set sb0_count
-	scoreboard = new bool[max_symbol];
 	std::fill(scoreboard, scoreboard + max_symbol, false);
 	
 	// set up null table
@@ -276,8 +275,6 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim ) :
 	
 	// build links for null table
 	null_table->links = std::vector<table_s*>(max_context, start_table);
-	
-	contexts = std::vector<table_s*>(max_order + 3);
 	
 	// integrate tables into contexts
 	contexts[ 0 ] = null_table;
@@ -351,18 +348,15 @@ void model_s::update_model( int symbol )
 	----------------------------------------------- */
 	
 void model_s::shift_context( int c )
-{
-	table_s* context;
-	int i;
-	
+{	
 	// shifting is not possible if max_order is below 1
 	// or context index is negative
 	if ( ( max_order < 2 ) || ( c < 0 ) ) return;
 	
 	// shift each orders' context
-	for ( i = max_order; i > 1; i-- ) {
+	for (int i = max_order; i > 1; i-- ) {
 		// this is the new current order context
-		context = contexts[ i - 1 ]->links[ c ];
+		table_s* context = contexts[ i - 1 ]->links[ c ];
 		
 		// check if context exists, build if needed
 		if ( context == nullptr ) {
@@ -449,13 +443,10 @@ void model_s::exclude_symbols( char rule, int c )
 int model_s::convert_int_to_symbol( int c, symbol *s )
 {
 	// search the symbol c in the current context table_s,
-	// return scale, low- and high counts
-	
-	table_s* context;
-	
+	// return scale, low- and high counts	
 
 	// totalize table for the current context
-	context = contexts[ current_order ];
+	table_s* context = contexts[ current_order ];
 	totalize_table( context );
 	
 	// finding the scale is easy
@@ -661,7 +652,9 @@ model_b::model_b( int max_c, int max_o, int c_lim ) :
 		// Copy settings into the model:
 		max_context(max_c),
 		max_order(max_o + 1),
-		max_count(c_lim)
+		max_count(c_lim),
+
+		contexts(max_o + 2)
 {
 	// set up null table
 	table* null_table = new table;
@@ -672,11 +665,9 @@ model_b::model_b( int max_c, int max_o, int c_lim ) :
 	table* start_table = new table;
 	start_table->links = std::vector<table*>(max_context);
 	
-	// build links for start table & null table
+	// build links for start table
 	null_table->links = std::vector<table*>(max_context, start_table);
-	
-	contexts = std::vector<table*>(max_order + 2);
-	
+		
 	// integrate tables into contexts
 	contexts[ 0 ] = null_table;
 	contexts[ 1 ] = start_table;
