@@ -273,9 +273,6 @@ model_s::model_s( int max_s, int max_c, int max_o, int c_lim ) :
 	table_s* start_table = new table_s;
 	start_table->links = std::vector<table_s*>(max_context);
 	
-	// build links for null table
-	null_table->links = std::vector<table_s*>(max_context, start_table);
-	
 	// integrate tables into contexts
 	contexts[ 0 ] = null_table;
 	contexts[ 1 ] = start_table;
@@ -303,7 +300,6 @@ model_s::~model_s()
 	delete contexts[1];
 	
 	// clean up null table
-	contexts[0]->links.clear(); // Don't delete the already-deleted links again!
 	delete contexts[0];
 	
 	// free everything else
@@ -600,9 +596,6 @@ model_b::model_b( int max_c, int max_o, int c_lim ) :
 	// set up start table
 	table* start_table = new table;
 	start_table->links = std::vector<table*>(max_context);
-	
-	// build links for start table
-	null_table->links = std::vector<table*>(max_context, start_table);
 		
 	// integrate tables into contexts
 	contexts[ 0 ] = null_table;
@@ -631,7 +624,6 @@ model_b::~model_b()
 	delete contexts[1];
 	
 	// clean up null table
-	contexts[0]->links.clear(); // Don't delete the already-deleted links again!
 	delete contexts[0];
 }
 
