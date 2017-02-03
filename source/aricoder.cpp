@@ -450,13 +450,11 @@ int model_s::convert_int_to_symbol( int c, symbol *s )
 	s->scale = totals[ 0 ];
 	
 	// check if that symbol exists in the current table. send escape otherwise
-	if ( c >= 0 ) {
-		if ( context->counts[ c ] > 0 ) {
-			// return high and low count for the current symbol
-			s->low_count  = totals[ c + 2 ];
-			s->high_count = totals[ c + 1 ];
-			return 0;
-		}
+	if ( context->counts[ c ] > 0 ) {
+		// return high and low count for the current symbol
+		s->low_count  = totals[ c + 2 ];
+		s->high_count = totals[ c + 1 ];
+		return 0;
 	}
 	
 	// return high and low count for the escape symbol
@@ -514,7 +512,7 @@ int model_s::convert_symbol_to_int(uint32_t count, symbol *s)
 	totals are calculated by accumulating counts in the current table_s
 	----------------------------------------------- */
 
-void model_s::totalize_table( table_s *context )
+void model_s::totalize_table( table_s* context )
 {
 	// update exclusion is used, so this has to be done each time
 	// escape probability calculation also takes place here
