@@ -110,23 +110,25 @@ struct table_s {
 	Resizes the table by rightshifting each count by scale_factor.
 	----------------------------------------------- */
 	inline void rescale_table(int scale_factor) {
-		// return now if counts not set
+		// Nothing to do if counts has not been set.
 		if (counts.empty()) return;
 
 		// now scale the table by bitshifting each count
 		int lst_symbol = max_symbol;
 		int i;
 		for (i = 0; i < lst_symbol; i++) {
-			//if ( counts[ i ] > 0 ) // Unnecessary check since counts is an unsigned type.
-			counts[i] >>= scale_factor;
+			counts[i] >>= scale_factor; // Counts will not become negative since it is an unsigned type.
 		}
 
 		// also rescale tables max count
 		max_count >>= scale_factor;
 
 		// seek for new last symbol
-		for (i = lst_symbol - 1; i >= 0; i--)
-			if (counts[i] > 0) break;
+		for (i = lst_symbol - 1; i >= 0; i--) {
+			if (counts[i] > 0) {
+				break;
+			}
+		}
 		max_symbol = i + 1;
 	}
 
