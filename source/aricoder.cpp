@@ -103,13 +103,13 @@ void aricoder::writeNrbitsAsZero() {
 		int remainingBits = 8 - cbit;
 		nrbits -= remainingBits;
 		bbyte <<= remainingBits;
-		sptr->write(&bbyte, 1, 1);
+		sptr->write_byte(bbyte);
 		cbit = 0;
 	}
 
 	constexpr uint8_t zero = 0;
 	while (nrbits >= 8) {
-		sptr->write((void*)&zero, 1, 1);
+		sptr->write_byte(zero);
 		nrbits -= 8;
 	}
 	/*
@@ -127,13 +127,13 @@ void aricoder::writeNrbitsAsOne() {
 		nrbits -= remainingBits;
 		bbyte <<= remainingBits;
 		bbyte |= std::numeric_limits<uint8_t>::max() >> (8 - remainingBits);
-		sptr->write(&bbyte, 1, 1);
+		sptr->write_byte(bbyte);
 		cbit = 0;
 	}
 
 	constexpr uint8_t all_ones = std::numeric_limits<uint8_t>::max();
 	while (nrbits >= 8) {
-		sptr->write((void*)&all_ones, 1, 1);
+		sptr->write_byte(all_ones);
 		nrbits -= 8;
 	}
 
@@ -220,7 +220,7 @@ unsigned char aricoder::read_bit()
 {
 	// read in new byte if needed
 	if ( cbit == 0 ) {
-		if ( !sptr->read_byte( &bbyte)) // read next byte if available
+		if ( !sptr->read_byte(&bbyte)) // read next byte if available
 			bbyte = 0; // if no more data is left in the stream
 		cbit = 8;
 	}

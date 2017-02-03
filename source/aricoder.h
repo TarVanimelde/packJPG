@@ -172,7 +172,7 @@ class aricoder
 
 		// write bit if done
 		if (cbit == 8) {
-			sptr->write(&bbyte, 1, 1);
+			sptr->write_byte(bbyte);
 			cbit = 0;
 		}
 	}
