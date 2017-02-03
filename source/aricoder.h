@@ -34,7 +34,7 @@ struct table {
 	uint32_t scale = uint32_t(0);
 
 	/* -----------------------------------------------
-	Deletes all contexts starting at the table (including those it links to).
+	Recursively deletes all the tables pointed to in links.
 	----------------------------------------------- */
 	~table() {
 		for (auto& link : links) {
@@ -45,7 +45,7 @@ struct table {
 	}
 
 	/* -----------------------------------------------
-	Checks if counts exist, creating them if they do not.
+	Checks if counts exist, creating it if it does not.
 	----------------------------------------------- */
 	inline void check_counts() {
 		// check if counts are available
@@ -71,7 +71,7 @@ struct table {
 	}
 
 	/* -----------------------------------------------
-	Recursively rescales the counts in each link by the given factor.
+	Recursively runs rescale_table on this and all linked contexts.
 	----------------------------------------------- */
 	inline void recursive_flush() {
 		for (auto& link : links) {
@@ -96,7 +96,7 @@ struct table_s {
 	uint16_t max_symbol = uint16_t(0);
 
 	/* -----------------------------------------------
-	Deletes all contexts starting at the table_s (including those it links to).
+	Recursively deletes all the tables pointed to in links.
 	----------------------------------------------- */
 	~table_s() {
 		for (auto& link : links) {
@@ -133,7 +133,7 @@ struct table_s {
 	}
 
 	/* -----------------------------------------------
-	A recursive function that goes through each linked context and rescales the counts.
+	Recursively runs rescale_table on this and all linked contexts.
 	----------------------------------------------- */
 	inline void recursive_flush() {
 		for (auto& link : links) {
