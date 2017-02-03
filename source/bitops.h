@@ -171,7 +171,7 @@ private:
 	
 	FILE* fptr;
 	std::vector<char> file_buffer; // Used to replace the default file buffer for reads/writes to improve performance.
-
+  
 	std::unique_ptr<abytewriter> mwrt;
 	std::unique_ptr<abytereader> mrdr;
 	

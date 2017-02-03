@@ -3279,7 +3279,7 @@ INTERN bool pack_pjg( void )
 	
 	
 	// init arithmetic compression
-	encoder = new aricoder( str_out, 1 );
+	encoder = new aricoder(str_out, StreamMode::kWrite);
 	
 	// discard meta information from header if option set
 	if ( disc_meta )
@@ -3416,7 +3416,7 @@ INTERN bool unpack_pjg( void )
 	
 	
 	// init arithmetic compression
-	decoder = new aricoder( str_in, 0 );
+	decoder = new aricoder(str_in, StreamMode::kRead);
 	
 	// decode JPG header
 	if ( !pjg_decode_generic( decoder, &hdrdata, &hdrs ) ) return false;
@@ -4682,7 +4682,7 @@ INTERN bool pjg_encode_zstscan( aricoder* enc, int cmp )
 	for ( i = 1; i < 64; i++ )
 	{			
 		// reduce range of model
-		model->exclude_symbols( 'a', 64 - i );
+		model->exclude_symbols(64 - i);
 		
 		// compare remaining list to remainnig scan
 		tpos = 0;
@@ -5059,7 +5059,7 @@ INTERN bool pjg_encode_ac_high( aricoder* enc, int cmp )
 			ctx_len = BITLEN1024P( ctx_avr ); // BITLENGTH context				
 			// shift context / do context modelling (segmentation is done per context)
 			shift_model( mod_len, ctx_len, snum );
-			mod_len->exclude_symbols( 'a', max_len );		
+			mod_len->exclude_symbols(max_len);		
 		
 			// simple treatment if coefficient is zero
 			if ( coeffs[ dpos ] == 0 ) {
@@ -5096,9 +5096,9 @@ INTERN bool pjg_encode_ac_high( aricoder* enc, int cmp )
 			}
 		}
 		// flush models
-		mod_len->flush_model( 1 );
-		mod_res->flush_model( 1 );
-		mod_sgn->flush_model( 1 );
+		mod_len->flush_model();
+		mod_res->flush_model();
+		mod_sgn->flush_model();
 	}
 	
 	// free memory / clear models
@@ -5219,7 +5219,7 @@ INTERN bool pjg_encode_ac_low( aricoder* enc, int cmp )
 			
 			// shift context / do context modelling (segmentation is done per context)
 			shift_model( mod_len, ctx_len, zdstls[ dpos ] );
-			mod_len->exclude_symbols( 'a', max_len );			
+			mod_len->exclude_symbols(max_len);			
 			
 			// simple treatment if coefficient is zero
 			if ( coeffs[ dpos ] == 0 ) {
@@ -5261,10 +5261,10 @@ INTERN bool pjg_encode_ac_low( aricoder* enc, int cmp )
 			}
 		}
 		// flush models
-		mod_len->flush_model( 1 );
-		mod_res->flush_model( 1 );
-		mod_top->flush_model( 1 );
-		mod_sgn->flush_model( 1 );
+		mod_len->flush_model();
+		mod_res->flush_model();
+		mod_top->flush_model();
+		mod_sgn->flush_model();
 	}
 	
 	// free memory / clear models
@@ -5348,7 +5348,7 @@ INTERN bool pjg_decode_zstscan( aricoder* dec, int cmp )
 	for ( i = 1; i < 64; i++ )
 	{			
 		// reduce range of model
-		model->exclude_symbols( 'a', 64 - i );
+		model->exclude_symbols(64 - i);
 		
 		// decode symbol
 		cpos = decode_ari( dec, model );
@@ -5723,7 +5723,7 @@ INTERN bool pjg_decode_ac_high( aricoder* dec, int cmp )
 			ctx_len = BITLEN1024P( ctx_avr ); // BITLENGTH context				
 			// shift context / do context modelling (segmentation is done per context)
 			shift_model( mod_len, ctx_len, snum );
-			mod_len->exclude_symbols( 'a', max_len );
+			mod_len->exclude_symbols(max_len);
 			
 			// decode bit length of current coefficient
 			clen = decode_ari( dec, mod_len );			
@@ -5760,9 +5760,9 @@ INTERN bool pjg_decode_ac_high( aricoder* dec, int cmp )
 			}
 		}
 		// flush models
-		mod_len->flush_model( 1 );
-		mod_res->flush_model( 1 );
-		mod_sgn->flush_model( 1 );
+		mod_len->flush_model();
+		mod_res->flush_model();
+		mod_sgn->flush_model();
 	}
 	
 	// free memory / clear models
@@ -5882,7 +5882,7 @@ INTERN bool pjg_decode_ac_low( aricoder* dec, int cmp )
 			ctx_len = BITLEN2048N( ctx_lak ); // BITLENGTH context				
 			// shift context / do context modelling (segmentation is done per context)
 			shift_model( mod_len, ctx_len, zdstls[ dpos ] );
-			mod_len->exclude_symbols( 'a', max_len );
+			mod_len->exclude_symbols(max_len);
 			
 			// decode bit length of current coefficient
 			clen = decode_ari( dec, mod_len );
@@ -5923,10 +5923,10 @@ INTERN bool pjg_decode_ac_low( aricoder* dec, int cmp )
 			}
 		}
 		// flush models
-		mod_len->flush_model( 1 );
-		mod_res->flush_model( 1 );
-		mod_top->flush_model( 1 );
-		mod_sgn->flush_model( 1 );
+		mod_len->flush_model();
+		mod_res->flush_model();
+		mod_top->flush_model();
+		mod_sgn->flush_model();
 	}
 	
 	// free memory / clear models

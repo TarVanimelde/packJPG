@@ -882,7 +882,7 @@ void iostream::open_stream()
 		// read whole stream into memory buffer
 		auto strwrt = std::make_unique<abytewriter>( 0 );
 		constexpr int buffer_capacity = 1024 * 1024;
-		std::vector<unsigned char> buffer(buffer_capacity);
+    std::vector<unsigned char> buffer(buffer_capacity);
 
 		int bytesRead = fread(buffer.data(), sizeof(buffer[0]), buffer_capacity, stdin);
 		while (bytesRead > 0) {
