@@ -11,6 +11,7 @@
 #define FDIV2( v, p )		( ( v < 0 ) ? -( (-v) >> p ) : ( v >> p ) )
 
 #include <memory>
+#include <vector>
 
 enum StreamType {
 	kFile = 0,
@@ -169,6 +170,8 @@ private:
 	bool read_mem_byte(unsigned char* to);
 	
 	FILE* fptr;
+	std::vector<char> file_buffer; // Used to replace the default file buffer for reads/writes to improve performance.
+
 	std::unique_ptr<abytewriter> mwrt;
 	std::unique_ptr<abytereader> mrdr;
 	

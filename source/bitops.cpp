@@ -853,6 +853,10 @@ void iostream::open_file()
 	
 	// open file for reading / writing
 	fptr = fopen( fn, ( mode == StreamMode::kRead ) ? "rb" : "wb" );
+	if (fptr != nullptr) {
+		file_buffer.reserve(32768);
+		std::setvbuf(fptr, file_buffer.data(), _IOFBF, file_buffer.capacity());
+	}
 }
 
 /* -----------------------------------------------
