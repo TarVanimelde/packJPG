@@ -375,7 +375,7 @@ void model_s::shift_context( int c )
 
 
 /* -----------------------------------------------
-	flushes the whole model by dividing through a specific scale factor
+	Flushes the entire model by calling rescale_table on all contexts.
 	----------------------------------------------- */
 	
 void model_s::flush_model()
@@ -385,50 +385,18 @@ void model_s::flush_model()
 
 
 /* -----------------------------------------------
-	exclude specific symbols using this function
+	Excludes every symbol above c.
 	----------------------------------------------- */
 	
-void model_s::exclude_symbols( char rule, int c )
+void model_s::exclude_symbols(int c)
 {
 	// exclusions are back to normal after update_model is used	
-	// modify scoreboard according to rule and value
-	switch ( rule )
-	{
-		case 'a':
-			// above rule
-			// every symbol above c is excluded
-			for ( c = c + 1; c < max_symbol; c++ ) {
-				if ( !scoreboard[ c ] ) {
-					scoreboard[ c ] = true;
-					sb0_count--;
-				}
-			}
-			break;
-		
-		case 'b':
-			// below rule
-			// every symbol below c is excluded
-			for ( c = c - 1; c >= 0; c-- ) {
-				if ( !scoreboard[ c ] ) {
-					scoreboard[ c ] = true;
-					sb0_count--;
-				}
-			}
-			break;
-		
-		case 'e':
-			// equal rule
-			// only c is excluded
-			if ( !scoreboard[ c ] ) {
-				scoreboard[ c ] = true;
-				sb0_count--;
-			}
-			break;
-		
-		default:
-			// unknown rule
-			// do nothing
-			break;
+
+	for ( c = c + 1; c < max_symbol; c++ ) {
+		if ( !scoreboard[ c ] ) {
+			scoreboard[ c ] = true;
+			sb0_count--;
+		}
 	}
 }
 
@@ -689,7 +657,7 @@ void model_b::shift_context( int c )
 
 
 /* -----------------------------------------------
-	flushes the whole model by dividing through a specific scale factor
+	Flushes the entire model by calling rescale_table on all contexts.
 	----------------------------------------------- */
 	
 void model_b::flush_model()

@@ -4682,7 +4682,7 @@ INTERN bool pjg_encode_zstscan( aricoder* enc, int cmp )
 	for ( i = 1; i < 64; i++ )
 	{			
 		// reduce range of model
-		model->exclude_symbols( 'a', 64 - i );
+		model->exclude_symbols(64 - i);
 		
 		// compare remaining list to remainnig scan
 		tpos = 0;
@@ -5059,7 +5059,7 @@ INTERN bool pjg_encode_ac_high( aricoder* enc, int cmp )
 			ctx_len = BITLEN1024P( ctx_avr ); // BITLENGTH context				
 			// shift context / do context modelling (segmentation is done per context)
 			shift_model( mod_len, ctx_len, snum );
-			mod_len->exclude_symbols( 'a', max_len );		
+			mod_len->exclude_symbols(max_len);		
 		
 			// simple treatment if coefficient is zero
 			if ( coeffs[ dpos ] == 0 ) {
@@ -5219,7 +5219,7 @@ INTERN bool pjg_encode_ac_low( aricoder* enc, int cmp )
 			
 			// shift context / do context modelling (segmentation is done per context)
 			shift_model( mod_len, ctx_len, zdstls[ dpos ] );
-			mod_len->exclude_symbols( 'a', max_len );			
+			mod_len->exclude_symbols(max_len);			
 			
 			// simple treatment if coefficient is zero
 			if ( coeffs[ dpos ] == 0 ) {
@@ -5348,7 +5348,7 @@ INTERN bool pjg_decode_zstscan( aricoder* dec, int cmp )
 	for ( i = 1; i < 64; i++ )
 	{			
 		// reduce range of model
-		model->exclude_symbols( 'a', 64 - i );
+		model->exclude_symbols(64 - i);
 		
 		// decode symbol
 		cpos = decode_ari( dec, model );
@@ -5723,7 +5723,7 @@ INTERN bool pjg_decode_ac_high( aricoder* dec, int cmp )
 			ctx_len = BITLEN1024P( ctx_avr ); // BITLENGTH context				
 			// shift context / do context modelling (segmentation is done per context)
 			shift_model( mod_len, ctx_len, snum );
-			mod_len->exclude_symbols( 'a', max_len );
+			mod_len->exclude_symbols(max_len);
 			
 			// decode bit length of current coefficient
 			clen = decode_ari( dec, mod_len );			
@@ -5882,7 +5882,7 @@ INTERN bool pjg_decode_ac_low( aricoder* dec, int cmp )
 			ctx_len = BITLEN2048N( ctx_lak ); // BITLENGTH context				
 			// shift context / do context modelling (segmentation is done per context)
 			shift_model( mod_len, ctx_len, zdstls[ dpos ] );
-			mod_len->exclude_symbols( 'a', max_len );
+			mod_len->exclude_symbols(max_len);
 			
 			// decode bit length of current coefficient
 			clen = decode_ari( dec, mod_len );

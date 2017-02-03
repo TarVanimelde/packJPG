@@ -210,7 +210,7 @@ class model_s
 	void update_model( int symbol );
 	void shift_context( int c );
 	void flush_model();
-	void exclude_symbols( char rule, int c );
+	void exclude_symbols(int c);
 	
 	int  convert_int_to_symbol( int c, symbol *s );
 	void get_symbol_scale( symbol *s );
