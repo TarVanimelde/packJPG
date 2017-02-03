@@ -34,7 +34,7 @@ struct table {
 	uint32_t scale = uint32_t(0);
 
 	/* -----------------------------------------------
-	Deletes all contexts starting at a given table.
+	Deletes all contexts starting at the table (including those it links to).
 	----------------------------------------------- */
 	~table() {
 		for (auto& link : links) {
@@ -58,14 +58,14 @@ struct table {
 	}
 
 	/* -----------------------------------------------
-	Resizes one table by rightshifting each count using a specific value.
+	Resizes the table by rightshifting each count by 1.
 	----------------------------------------------- */
-	inline void rescale_table(int scale_factor) {
+	inline void rescale_table() {
 		// Do nothing if counts is not set:
 		if (!counts.empty()) {
 			// Scale the table by bitshifting each count, be careful not to set any count zero:
-			counts[0] = std::max(uint16_t(1), uint16_t(counts[0] >> scale_factor));
-			counts[1] = std::max(uint16_t(1), uint16_t(counts[1] >> scale_factor));
+			counts[0] = std::max(uint16_t(1), uint16_t(counts[0] >> 1));
+			counts[1] = std::max(uint16_t(1), uint16_t(counts[1] >> 1));
 			scale = counts[0] + counts[1];
 		}
 	}
@@ -73,14 +73,14 @@ struct table {
 	/* -----------------------------------------------
 	Recursively rescales the counts in each link by the given factor.
 	----------------------------------------------- */
-	inline void recursive_flush(int scale_factor) {
+	inline void recursive_flush() {
 		for (auto& link : links) {
 			if (link != nullptr) {
-				link->recursive_flush(scale_factor);
+				link->recursive_flush();
 			}
 		}
 		// rescale specific table
-		rescale_table(scale_factor);
+		rescale_table();
 	}
 };
 
@@ -96,7 +96,7 @@ struct table_s {
 	uint16_t max_symbol = uint16_t(0);
 
 	/* -----------------------------------------------
-	Deletes all contexts starting at a given table_s.
+	Deletes all contexts starting at the table_s (including those it links to).
 	----------------------------------------------- */
 	~table_s() {
 		for (auto& link : links) {
@@ -107,9 +107,9 @@ struct table_s {
 	}
 
 	/* -----------------------------------------------
-	Resizes the table by rightshifting each count by scale_factor.
+	Resizes the table by rightshifting each count by 1.
 	----------------------------------------------- */
-	inline void rescale_table(int scale_factor) {
+	inline void rescale_table() {
 		// Nothing to do if counts has not been set.
 		if (counts.empty()) return;
 
@@ -117,11 +117,11 @@ struct table_s {
 		int lst_symbol = max_symbol;
 		int i;
 		for (i = 0; i < lst_symbol; i++) {
-			counts[i] >>= scale_factor; // Counts will not become negative since it is an unsigned type.
+			counts[i] >>= 1; // Counts will not become negative since it is an unsigned type.
 		}
 
 		// also rescale tables max count
-		max_count >>= scale_factor;
+		max_count >>= 1;
 
 		// seek for new last symbol
 		for (i = lst_symbol - 1; i >= 0; i--) {
@@ -135,15 +135,15 @@ struct table_s {
 	/* -----------------------------------------------
 	A recursive function that goes through each linked context and rescales the counts.
 	----------------------------------------------- */
-	inline void recursive_flush(int scale_factor) {
+	inline void recursive_flush() {
 		for (auto& link : links) {
 			if (link != nullptr) {
-				link->recursive_flush(scale_factor);
+				link->recursive_flush();
 			}
 		}
 
 		// rescale specific table
-		rescale_table(scale_factor);
+		rescale_table();
 	}
 };
 
@@ -209,7 +209,7 @@ class model_s
 	
 	void update_model( int symbol );
 	void shift_context( int c );
-	void flush_model( int scale_factor );
+	void flush_model();
 	void exclude_symbols( char rule, int c );
 	
 	int  convert_int_to_symbol( int c, symbol *s );
@@ -247,7 +247,7 @@ class model_b
 	
 	void update_model( int symbol );
 	void shift_context( int c );
-	void flush_model( int scale_factor );
+	void flush_model();
 	
 	int  convert_int_to_symbol( int c, symbol *s );
 	void get_symbol_scale( symbol *s );

@@ -5096,9 +5096,9 @@ INTERN bool pjg_encode_ac_high( aricoder* enc, int cmp )
 			}
 		}
 		// flush models
-		mod_len->flush_model( 1 );
-		mod_res->flush_model( 1 );
-		mod_sgn->flush_model( 1 );
+		mod_len->flush_model();
+		mod_res->flush_model();
+		mod_sgn->flush_model();
 	}
 	
 	// free memory / clear models
@@ -5261,10 +5261,10 @@ INTERN bool pjg_encode_ac_low( aricoder* enc, int cmp )
 			}
 		}
 		// flush models
-		mod_len->flush_model( 1 );
-		mod_res->flush_model( 1 );
-		mod_top->flush_model( 1 );
-		mod_sgn->flush_model( 1 );
+		mod_len->flush_model();
+		mod_res->flush_model();
+		mod_top->flush_model();
+		mod_sgn->flush_model();
 	}
 	
 	// free memory / clear models
@@ -5760,9 +5760,9 @@ INTERN bool pjg_decode_ac_high( aricoder* dec, int cmp )
 			}
 		}
 		// flush models
-		mod_len->flush_model( 1 );
-		mod_res->flush_model( 1 );
-		mod_sgn->flush_model( 1 );
+		mod_len->flush_model();
+		mod_res->flush_model();
+		mod_sgn->flush_model();
 	}
 	
 	// free memory / clear models
@@ -5923,10 +5923,10 @@ INTERN bool pjg_decode_ac_low( aricoder* dec, int cmp )
 			}
 		}
 		// flush models
-		mod_len->flush_model( 1 );
-		mod_res->flush_model( 1 );
-		mod_top->flush_model( 1 );
-		mod_sgn->flush_model( 1 );
+		mod_len->flush_model();
+		mod_res->flush_model();
+		mod_top->flush_model();
+		mod_sgn->flush_model();
 	}
 	
 	// free memory / clear models

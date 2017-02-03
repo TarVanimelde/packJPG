@@ -328,7 +328,7 @@ void model_s::update_model( int symbol )
 			// if count for that symbol have gone above the maximum count
 			// the table has to be resized (scale factor 2)
 			if (count == max_count) {
-				context->rescale_table(1);
+				context->rescale_table();
 			}
 		}
 	}
@@ -378,9 +378,9 @@ void model_s::shift_context( int c )
 	flushes the whole model by dividing through a specific scale factor
 	----------------------------------------------- */
 	
-void model_s::flush_model( int scale_factor )
+void model_s::flush_model()
 {
-	contexts[1]->recursive_flush(scale_factor);
+	contexts[1]->recursive_flush();
 }
 
 
@@ -649,7 +649,7 @@ void model_b::update_model( int symbol )
 		// if counts for that symbol have gone above the maximum count
 		// the table has to be resized (scale factor 2)
 		if ( context->counts[ symbol ] >= max_count )
-			context->rescale_table(1);
+			context->rescale_table();
 	}
 }
 
@@ -692,9 +692,9 @@ void model_b::shift_context( int c )
 	flushes the whole model by dividing through a specific scale factor
 	----------------------------------------------- */
 	
-void model_b::flush_model( int scale_factor )
+void model_b::flush_model()
 {
-	contexts[1]->recursive_flush(scale_factor);
+	contexts[1]->recursive_flush();
 }
 
 
