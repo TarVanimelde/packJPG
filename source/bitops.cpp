@@ -700,6 +700,10 @@ int iostream::read( void* to, int tpsize, int dtsize )
 	return ( srct == StreamType::kFile) ? read_file( to, tpsize, dtsize ) : read_mem( to, tpsize, dtsize );
 }
 
+bool iostream::read_byte(unsigned char* to) {
+	return  srct == StreamType::kFile ? read_file_byte(to) : read_mem_byte(to);
+}
+
 /* -----------------------------------------------
 	generic write function
 	----------------------------------------------- */
@@ -707,6 +711,10 @@ int iostream::read( void* to, int tpsize, int dtsize )
 int iostream::write( void* from, int tpsize, int dtsize )
 {
 	return ( srct == StreamType::kFile) ? write_file( from, tpsize, dtsize ) : write_mem( from, tpsize, dtsize );
+}
+
+int iostream::write_byte(unsigned char byte) {
+	return srct == StreamType::kFile ? write_file_byte(byte) : write_mem_byte(byte);
 }
 
 /* -----------------------------------------------
@@ -903,6 +911,10 @@ int iostream::write_file( void* from, int tpsize, int dtsize )
 	return fwrite( from, tpsize, dtsize, fptr );
 }
 
+int iostream::write_file_byte(unsigned char byte) {
+	return fputc(byte, fptr) == byte;
+}
+
 /* -----------------------------------------------
 	read function for files
 	----------------------------------------------- */
@@ -910,6 +922,12 @@ int iostream::write_file( void* from, int tpsize, int dtsize )
 int iostream::read_file( void* to, int tpsize, int dtsize )
 {
 	return fread( to, tpsize, dtsize, fptr );
+}
+
+bool iostream::read_file_byte(unsigned char* to) {
+	int val = fgetc(fptr);
+	*to = val;
+	return val != EOF;
 }
 
 /* -----------------------------------------------
@@ -925,6 +943,11 @@ int iostream::write_mem( void* from, int tpsize, int dtsize )
 	return ( mwrt->error()) ? 0 : n;
 }
 
+int iostream::write_mem_byte(unsigned char byte) {
+	mwrt->write(byte);
+	return mwrt->error() ? 0 : 1;
+}
+
 /* -----------------------------------------------
 	read function for memory
 	----------------------------------------------- */
@@ -934,4 +957,8 @@ int iostream::read_mem( void* to, int tpsize, int dtsize )
 	int n = tpsize * dtsize;
 	
 	return ( mrdr->read_n( ( unsigned char* ) to, n ) ) / tpsize;
+}
+
+bool iostream::read_mem_byte(unsigned char* to) {
+	return mrdr->read(to) == 1;
 }

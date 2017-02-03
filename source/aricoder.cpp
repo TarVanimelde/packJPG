@@ -186,7 +186,7 @@ void aricoder::write_bit( unsigned char bit )
 	
 	// write bit if done
 	if ( cbit == 8 ) {
-		sptr->write( (void*) &bbyte, 1, 1 );
+		sptr->write_byte(bbyte);
 		cbit = 0;
 	}
 }
@@ -199,7 +199,7 @@ unsigned char aricoder::read_bit( void )
 {
 	// read in new byte if needed
 	if ( cbit == 0 ) {
-		if ( sptr->read( &bbyte, 1, 1 ) == 0 ) // read next byte if available
+		if ( !sptr->read_byte( &bbyte)) // read next byte if available
 			bbyte = 0; // if no more data is left in the stream
 		cbit = 8;
 	}

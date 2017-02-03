@@ -2111,7 +2111,7 @@ INTERN bool read_jpeg( void )
 			crst = 0;
 			while ( true ) {
 				// read byte from imagedata
-				if ( str_in->read( &tmp, 1, 1 ) == 0 )
+				if ( str_in->read_byte(&tmp) == 0 )
 					break;
 					
 				// non-0xFF loop
@@ -2119,14 +2119,14 @@ INTERN bool read_jpeg( void )
 					crst = 0;
 					while ( tmp != 0xFF ) {
 						huffw->write( tmp );
-						if ( str_in->read( &tmp, 1, 1 ) == 0 )
+						if ( str_in->read_byte(&tmp) == 0 )
 							break;
 					}
 				}
 				
 				// treatment of 0xFF
 				if ( tmp == 0xFF ) {
-					if ( str_in->read( &tmp, 1, 1 ) == 0 )
+					if ( str_in->read_byte(&tmp) == 0 )
 						break; // read next byte & check
 					if ( tmp == 0x00 ) {
 						crst = 0;
@@ -2251,7 +2251,7 @@ INTERN bool read_jpeg( void )
 	}
 	
 	// store garbage after EOI if needed
-	grbs = str_in->read( &tmp, 1, 1 );	
+	grbs = str_in->read_byte(&tmp);
 	if ( grbs > 0 ) {
 		grbgw = new abytewriter( 1024 );
 		grbgw->write( tmp );
@@ -2333,16 +2333,16 @@ INTERN bool merge_jpeg( void )
 		// write & expand huffman coded image data
 		for ( ipos = scnp[ scan - 1 ]; ipos < scnp[ scan ]; ipos++ ) {
 			// write current byte
-			str_out->write( huffdata + ipos, 1, 1 );
+			str_out->write_byte(huffdata[ipos]);
 			// check current byte, stuff if needed
 			if ( huffdata[ ipos ] == 0xFF )
-				str_out->write( &stv, 1, 1 );
+				str_out->write_byte(stv);
 			// insert restart markers if needed
 			if ( rstp != NULL ) {
 				if ( ipos == rstp[ rpos ] ) {
 					rst = 0xD0 + ( cpos % 8 );
-					str_out->write( &mrk, 1, 1 );
-					str_out->write( &rst, 1, 1 );
+					str_out->write_byte(mrk);
+					str_out->write_byte(rst);
 					rpos++; cpos++;
 				}
 			}
@@ -2351,8 +2351,8 @@ INTERN bool merge_jpeg( void )
 		if ( rst_err != NULL ) {
 			while ( rst_err[ scan - 1 ] > 0 ) {
 				rst = 0xD0 + ( cpos % 8 );
-				str_out->write( &mrk, 1, 1 );
-				str_out->write( &rst, 1, 1 );
+				str_out->write_byte(mrk);
+				str_out->write_byte(rst);
 				cpos++;	rst_err[ scan - 1 ]--;
 			}
 		}
@@ -3268,14 +3268,14 @@ INTERN bool pack_pjg( void )
 	// store settings if not auto
 	if ( !auto_set ) {
 		hcode = 0x00;
-		str_out->write( &hcode, 1, 1 );
+		str_out->write_byte(hcode);
 		str_out->write( nois_trs, 1, 4 );
 		str_out->write( segm_cnt, 1, 4 );
 	}
 	
 	// store version number
 	hcode = appversion;
-	str_out->write( &hcode, 1, 1 );
+	str_out->write_byte(hcode);
 	
 	
 	// init arithmetic compression
@@ -3390,7 +3390,7 @@ INTERN bool unpack_pjg( void )
 	
 	// check header codes ( maybe position in other function ? )
 	while( true ) {
-		str_in->read( &hcode, 1, 1 );
+		str_in->read_byte(&hcode);
 		if ( hcode == 0x00 ) {
 			// retrieve compression settings from file
 			str_in->read( nois_trs, 1, 4 );

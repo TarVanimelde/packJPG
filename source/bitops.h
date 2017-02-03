@@ -143,7 +143,9 @@ public:
 	~iostream();
 	void switch_mode();
 	int read( void* to, int tpsize, int dtsize );
+	bool read_byte(unsigned char* to);
 	int write( void* from, int tpsize, int dtsize );
+	int write_byte(unsigned char byte);
 	int flush();
 	int rewind();
 	int getpos();
@@ -158,9 +160,13 @@ private:
 	void open_stream();
 	
 	int write_file( void* from, int tpsize, int dtsize );
+	int write_file_byte(unsigned char byte);
 	int read_file( void* to, int tpsize, int dtsize );
+	bool read_file_byte(unsigned char* to);
 	int write_mem( void* from, int tpsize, int dtsize );
+	int write_mem_byte(unsigned char byte);
 	int read_mem( void* to, int tpsize, int dtsize );
+	bool read_mem_byte(unsigned char* to);
 	
 	FILE* fptr;
 	std::unique_ptr<abytewriter> mwrt;
