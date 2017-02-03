@@ -491,7 +491,11 @@ int model_s::convert_symbol_to_int(uint32_t count, symbol *s)
 
 	// go through the totals table, search the symbol that matches the count
 	int c;
-	for (c = 1; count < totals[c]; c++);	
+	for (c = 1; c < totals.size(); c++) {
+		if (count >= totals[c]) {
+			break;
+		}
+	}
 	// set up the current symbol
 	s->low_count = totals[c]; // It is guaranteed that there exists such a symbol.
 	s->high_count = totals[c - 1]; // This is guaranteed to not go out of bounds since the search started at index 1 of totals.
