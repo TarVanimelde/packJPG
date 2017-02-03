@@ -2304,7 +2304,7 @@ INTERN bool merge_jpeg( void )
 	
 	
 	// write SOI
-	str_out->write( SOI, 1, 2 );
+	str_out->write( SOI, 2 );
 	
 	// JPEG writing loop
 	while ( true )
@@ -2321,7 +2321,7 @@ INTERN bool merge_jpeg( void )
 		}
 		
 		// write header data to file
-		str_out->write( hdrdata + tmp, 1, ( hpos - tmp ) );
+		str_out->write( hdrdata + tmp, ( hpos - tmp ) );
 		
 		// get out if last marker segment type was not SOS
 		if ( type != 0xDA ) break;
@@ -2362,11 +2362,11 @@ INTERN bool merge_jpeg( void )
 	}
 	
 	// write EOI
-	str_out->write( EOI, 1, 2 );
+	str_out->write( EOI, 2 );
 	
 	// write garbage if needed
 	if ( grbs > 0 )
-		str_out->write( grbgdata, 1, grbs );
+		str_out->write( grbgdata, grbs );
 	
 	// errormessage if write error
 	if ( str_out->chkerr() ) {
@@ -3263,14 +3263,14 @@ INTERN bool pack_pjg( void )
 	
 	
 	// PJG-Header
-	str_out->write( (void*) pjg_magic, 1, 2 );
+	str_out->write( reinterpret_cast<const unsigned char*>(pjg_magic), 2 );
 	
 	// store settings if not auto
 	if ( !auto_set ) {
 		hcode = 0x00;
 		str_out->write_byte(hcode);
-		str_out->write( nois_trs, 1, 4 );
-		str_out->write( segm_cnt, 1, 4 );
+		str_out->write( nois_trs, 4 );
+		str_out->write( segm_cnt, 4 );
 	}
 	
 	// store version number

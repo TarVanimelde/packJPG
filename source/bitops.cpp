@@ -499,7 +499,7 @@ void abytewriter::write( unsigned char byte )
 	writes n byte to abytewriter
 	----------------------------------------------- */
 	
-void abytewriter::write_n( unsigned char* byte, int n )
+void abytewriter::write_n(const unsigned char* byte, int n )
 {
 	// safety check for error
 	if ( error() || n < 0 ) return;
@@ -708,9 +708,9 @@ bool iostream::read_byte(unsigned char* to) {
 	generic write function
 	----------------------------------------------- */
 
-int iostream::write( void* from, int tpsize, int dtsize )
+int iostream::write(const unsigned char* from, int dtsize )
 {
-	return ( srct == StreamType::kFile) ? write_file( from, tpsize, dtsize ) : write_mem( from, tpsize, dtsize );
+	return ( srct == StreamType::kFile) ? write_file( from, dtsize ) : write_mem( from, dtsize );
 }
 
 int iostream::write_byte(unsigned char byte) {
@@ -906,9 +906,9 @@ void iostream::open_stream()
 	write function for files
 	----------------------------------------------- */
 
-int iostream::write_file( void* from, int tpsize, int dtsize )
+int iostream::write_file(const unsigned char* from, int dtsize )
 {
-	return fwrite( from, tpsize, dtsize, fptr );
+	return fwrite( from, sizeof(unsigned char), dtsize, fptr );
 }
 
 int iostream::write_file_byte(unsigned char byte) {
@@ -934,13 +934,11 @@ bool iostream::read_file_byte(unsigned char* to) {
 	write function for memory
 	----------------------------------------------- */
 	
-int iostream::write_mem( void* from, int tpsize, int dtsize )
-{
-	int n = tpsize * dtsize;
+int iostream::write_mem(const unsigned char* from, int dtsize )
+{	
+	mwrt->write_n(from, dtsize);
 	
-	mwrt->write_n( ( unsigned char* ) from, n );
-	
-	return ( mwrt->error()) ? 0 : n;
+	return ( mwrt->error()) ? 0 : dtsize;
 }
 
 int iostream::write_mem_byte(unsigned char byte) {
