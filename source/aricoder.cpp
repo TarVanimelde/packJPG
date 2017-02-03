@@ -206,8 +206,7 @@ void aricoder::decode( symbol* s )
 		chigh_local++;
 		ccode_local <<= 1;
 		ccode_local |= read_bit();
-	}
-
+	}	
 	chigh = chigh_local;
 	clow = clow_local;
 	ccode = ccode_local;
@@ -221,7 +220,7 @@ unsigned char aricoder::read_bit()
 {
 	// read in new byte if needed
 	if ( cbit == 0 ) {
-		if ( sptr->read( &bbyte, 1, 1 ) == 0 ) // read next byte if available
+		if ( !sptr->read_byte( &bbyte)) // read next byte if available
 			bbyte = 0; // if no more data is left in the stream
 		cbit = 8;
 	}
