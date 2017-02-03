@@ -1779,7 +1779,7 @@ INTERN bool check_file( void )
 	if ( pjgfilename != NULL ) free( pjgfilename ); pjgfilename = NULL;
 	
 	// immediately return error if 2 bytes can't be read
-	if ( str_in->read( fileid, 1, 2 ) != 2 ) { 
+	if ( str_in->read( fileid, 2 ) != 2 ) { 
 		filetype = F_UNK;
 		sprintf( errormessage, "file doesn't contain enough data" );
 		errorlevel = 2;
@@ -1870,7 +1870,7 @@ INTERN bool check_file( void )
 #if !defined(BUILD_LIB)
 INTERN bool swap_streams( void )	
 {
-	char dmp[ 2 ];
+	unsigned char dmp[ 2 ];
 	
 	// store input stream
 	str_str = str_in;
@@ -1879,7 +1879,7 @@ INTERN bool swap_streams( void )
 	// replace input stream by output stream / switch mode for reading / read first bytes
 	str_in = str_out;
 	str_in->switch_mode();
-	str_in->read( dmp, 1, 2 );
+	str_in->read( dmp, 2 );
 	
 	// open new stream for output / check for errors
 	str_out = new iostream( nullptr, StreamType::kMemory, 0, StreamMode::kWrite );
@@ -1946,8 +1946,8 @@ INTERN bool compare_output( void )
 	for ( i = 0; i < dsize; i++ ) {
 		b = i % bsize;
 		if ( b == 0 ) {
-			str_str->read( buff_ori, sizeof( char ), bsize );
-			str_out->read( buff_cmp, sizeof( char ), bsize );
+			str_str->read( buff_ori, bsize );
+			str_out->read( buff_cmp, bsize );
 		}
 		if ( buff_ori[ b ] != buff_cmp[ b ] ) {
 			sprintf( errormessage, "difference found at 0x%X", i );
@@ -2181,13 +2181,13 @@ INTERN bool read_jpeg( void )
 		}
 		else {
 			// read in next marker
-			if ( str_in->read( segment, 1, 2 ) != 2 ) break;
+			if ( str_in->read( segment, 2 ) != 2 ) break;
 			if ( segment[ 0 ] != 0xFF ) {
 				// ugly fix for incorrect marker segment sizes
 				sprintf( errormessage, "size mismatch in marker segment FF %2X", type );
 				errorlevel = 2;
 				if ( type == 0xFE ) { //  if last marker was COM try again
-					if ( str_in->read( segment, 1, 2 ) != 2 ) break;
+					if ( str_in->read( segment, 2 ) != 2 ) break;
 					if ( segment[ 0 ] == 0xFF ) errorlevel = 1;
 				}
 				if ( errorlevel == 2 ) {
@@ -2215,7 +2215,7 @@ INTERN bool read_jpeg( void )
 		}
 		
 		// read in next segments' length and check it
-		if ( str_in->read( segment + 2, 1, 2 ) != 2 ) break;
+		if ( str_in->read( segment + 2, 2 ) != 2 ) break;
 		len = 2 + B_SHORT( segment[ 2 ], segment[ 3 ] );
 		if ( len < 4 ) break;
 		
@@ -2233,7 +2233,7 @@ INTERN bool read_jpeg( void )
 		}
 		
 		// read rest of segment, store back in header writer
-		if ( str_in->read( ( segment + 4 ), 1, ( len - 4 ) ) !=
+		if ( str_in->read( ( segment + 4 ), ( len - 4 ) ) !=
 			( unsigned short ) ( len - 4 ) ) break;
 		hdrw->write_n( segment, len );
 	}
@@ -2256,7 +2256,7 @@ INTERN bool read_jpeg( void )
 		grbgw = new abytewriter( 1024 );
 		grbgw->write( tmp );
 		while( true ) {
-			len = str_in->read( segment, 1, ssize );
+			len = str_in->read( segment, ssize );
 			if ( len == 0 ) break;
 			grbgw->write_n( segment, len );
 		}
@@ -3393,8 +3393,8 @@ INTERN bool unpack_pjg( void )
 		str_in->read_byte(&hcode);
 		if ( hcode == 0x00 ) {
 			// retrieve compression settings from file
-			str_in->read( nois_trs, 1, 4 );
-			str_in->read( segm_cnt, 1, 4 );
+			str_in->read( nois_trs, 4 );
+			str_in->read( segm_cnt, 4 );
 			auto_set = false;
 		}
 		else if ( hcode >= 0x14 ) {

@@ -695,9 +695,9 @@ void iostream::switch_mode()
 	generic read function
 	----------------------------------------------- */
 	
-int iostream::read( void* to, int tpsize, int dtsize )
+int iostream::read(unsigned char* to, int dtsize)
 {
-	return ( srct == StreamType::kFile) ? read_file( to, tpsize, dtsize ) : read_mem( to, tpsize, dtsize );
+	return ( srct == StreamType::kFile) ? read_file( to, dtsize ) : read_mem( to, dtsize );
 }
 
 bool iostream::read_byte(unsigned char* to) {
@@ -919,9 +919,9 @@ int iostream::write_file_byte(unsigned char byte) {
 	read function for files
 	----------------------------------------------- */
 
-int iostream::read_file( void* to, int tpsize, int dtsize )
+int iostream::read_file(unsigned char* to, int dtsize )
 {
-	return fread( to, tpsize, dtsize, fptr );
+	return fread( to, sizeof(unsigned char), dtsize, fptr );
 }
 
 bool iostream::read_file_byte(unsigned char* to) {
@@ -950,11 +950,9 @@ int iostream::write_mem_byte(unsigned char byte) {
 	read function for memory
 	----------------------------------------------- */
 
-int iostream::read_mem( void* to, int tpsize, int dtsize )
-{
-	int n = tpsize * dtsize;
-	
-	return ( mrdr->read_n( ( unsigned char* ) to, n ) ) / tpsize;
+int iostream::read_mem(unsigned char* to, int dtsize)
+{	
+	return mrdr->read_n(to, dtsize);
 }
 
 bool iostream::read_mem_byte(unsigned char* to) {

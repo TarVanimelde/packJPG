@@ -142,7 +142,7 @@ public:
 	iostream( void* src, StreamType srctype, int srcsize, StreamMode iomode );
 	~iostream();
 	void switch_mode();
-	int read( void* to, int tpsize, int dtsize );
+	int read(unsigned char* to, int dtsize);
 	bool read_byte(unsigned char* to);
 	int write(const unsigned char* from, int dtsize);
 	int write_byte(unsigned char byte);
@@ -161,11 +161,11 @@ private:
 	
 	int write_file(const unsigned char* from, int dtsize);
 	int write_file_byte(unsigned char byte);
-	int read_file( void* to, int tpsize, int dtsize );
+	int read_file(unsigned char* to, int dtsize);
 	bool read_file_byte(unsigned char* to);
 	int write_mem(const unsigned char* from, int dtsize );
 	int write_mem_byte(unsigned char byte);
-	int read_mem( void* to, int tpsize, int dtsize );
+	int read_mem(unsigned char* to, int dtsize);
 	bool read_mem_byte(unsigned char* to);
 	
 	FILE* fptr;
