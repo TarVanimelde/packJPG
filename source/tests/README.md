@@ -136,6 +136,23 @@ boundary instead.
    `-p` (proceed-on-warnings) makes packJPG use padbit=1 — exactly what libjpeg
    wrote — so round-trips stay bit-identical; the CLI test uses `-p` throughout.
 
+6. **Out-of-bounds heap write in `pjg_unoptimize_header` (`packjpg.cpp`) —
+   FIXED.** On the decompress path the reconstructed JFIF header is walked with
+   segment lengths and Huffman/quant "skip" counts taken straight from the
+   (untrusted) decompressed stream. A malformed DHT/DQT segment could drive
+   `hpos` past the end of the `hdrdata` allocation, so the in-place rewrites
+   (`hdrdata[hpos+spos] += …`, std-table reinsertion) scribbled over adjacent
+   heap and corrupted the allocator — the process then aborted inside `free()`
+   in `reset_buffers` (`EXC_BREAKPOINT`/SIGTRAP on macOS, SIGSEGV under a
+   different heap layout). The std-table index `i = hdrdata[hpos+1]` was also
+   used to read `std_huff_lengths[i]`/`std_huff_tables[i]` (size-4 arrays)
+   without bounding `i`. **Fix:** bound every `hdrdata` access against `hdrs`
+   (and `i` against `[0,4)`) in both `pjg_unoptimize_header` and its encode-side
+   mirror `pjg_optimize_header`; a violation is reported via `pjg_header_error()`
+   (sets `errorlevel`, so the pipeline actually halts instead of proceeding into
+   `recode_jpeg` with half-initialized state). Regression fixture:
+   `fixtures/invalid/pjg_header_oob.pjg`.
+
 ## Notes / limitations
 
 * The shipped `docs/sample_images.zip` contains only PNG coefficient dumps, not

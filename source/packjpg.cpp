@@ -5983,7 +5983,7 @@ INTERN bool pjg_decode_generic( ArithmeticDecoder* dec, unsigned char** data, in
 		model->shift_context( c );
 	}
 	delete( model );
-	
+
 	// check for out of memory
 	if ( bwrt->error() ) {
 		delete bwrt;
@@ -6064,6 +6064,24 @@ INTERN void pjg_get_zerosort_scan( unsigned char* sv, int cmp )
 
 
 /* -----------------------------------------------
+	report a malformed marker segment in the JFIF header and fail
+
+	The header (un)optimizers walk marker segments whose lengths and skip
+	counts come straight from the input. When one of those would drive an
+	access out of the hdrdata allocation the header is corrupt: flag it so
+	the pipeline aborts instead of continuing with half-initialized state
+	(a plain "return false" is not enough -- execute() only halts later
+	stages when errorlevel is raised).
+	----------------------------------------------- */
+INTERN bool pjg_header_error( void )
+{
+	sprintf( errormessage, "malformed marker segment in header" );
+	errorlevel = 2;
+	return false;
+}
+
+
+/* -----------------------------------------------
 	optimizes JFIF header for compression
 	----------------------------------------------- */
 INTERN bool pjg_optimize_header( void )
@@ -6076,20 +6094,29 @@ INTERN bool pjg_optimize_header( void )
 	unsigned int skip; // bytes to skip
 	unsigned int spos; // sub position
 	int i;
-	
-	
-	// search for DHT (0xFFC4) & DQT (0xFFDB) marker segments	
+
+	// Mirror of pjg_unoptimize_header: bound every hdrdata access against
+	// hdrsz so a malformed JFIF header (segment lengths / skip counts come
+	// from the input) can never drive hpos out of the allocation.
+	const unsigned int hdrsz = ( hdrs > 0 ) ? ( unsigned int ) hdrs : 0;
+
+	// search for DHT (0xFFC4) & DQT (0xFFDB) marker segments
 	// header parser loop
 	while ( ( int ) hpos < hdrs ) {
+		if ( hpos + 4 > hdrsz ) return pjg_header_error();
 		type = hdrdata[ hpos + 1 ];
 		len = 2 + B_SHORT( hdrdata[ hpos + 2 ], hdrdata[ hpos + 3 ] );
+		if ( len < 4 || hpos + len > hdrsz ) return pjg_header_error();
 		if ( type == 0xC4 ) { // for DHT
 			fpos = hpos + len; // reassign length to end position
 			hpos += 4; // skip marker & length
-			while ( hpos < fpos ) {			
-				hpos++;				
-				// table found - compare with each of the four standard tables		
+			while ( hpos < fpos ) {
+				hpos++;
+				if ( hpos + 16 > hdrsz ) return pjg_header_error();
+				// table found - compare with each of the four standard tables
 				for ( i = 0; i < 4; i++ ) {
+					if ( hpos + std_huff_lengths[ i ] > hdrsz )
+						continue; // table can't fit -> can't match
 					for ( spos = 0; spos < std_huff_lengths[ i ]; spos++ ) {
 						if ( hdrdata[ hpos + spos ] != std_huff_tables[ i ][ spos ] )
 							break;
@@ -6097,7 +6124,7 @@ INTERN bool pjg_optimize_header( void )
 					// check if comparison ok
 					if ( spos != std_huff_lengths[ i ] )
 						continue;
-					
+
 					// if we get here, the table matches the standard table
 					// number 'i', so it can be replaced
 					hdrdata[ hpos + 0 ] = std_huff_lengths[ i ] - 16 - i;
@@ -6107,10 +6134,10 @@ INTERN bool pjg_optimize_header( void )
 					// everything done here, so leave
 					break;
 				}
-								
+
 				skip = 16;
-				for ( i = 0; i < 16; i++ )		
-					skip += ( int ) hdrdata[ hpos + i ];				
+				for ( i = 0; i < 16; i++ )
+					skip += ( int ) hdrdata[ hpos + i ];
 				hpos += skip;
 			}
 		}
@@ -6118,26 +6145,28 @@ INTERN bool pjg_optimize_header( void )
 			fpos = hpos + len; // reassign length to end position
 			hpos += 4; // skip marker & length
 			while ( hpos < fpos ) {
-				i = LBITS( hdrdata[ hpos ], 4 );				
+				if ( hpos >= hdrsz ) return pjg_header_error();
+				i = LBITS( hdrdata[ hpos ], 4 );
 				hpos++;
 				// table found
 				if ( i == 1 ) { // get out for 16 bit precision
 					hpos += 128;
 					continue;
 				}
-				// do diff coding for 8 bit precision
+				// do diff coding for 8 bit precision (reads/writes hdrdata[hpos+0..63])
+				if ( hpos + 64 > hdrsz ) return pjg_header_error();
 				for ( spos = 63; spos > 0; spos-- )
 					hdrdata[ hpos + spos ] -= hdrdata[ hpos + spos - 1 ];
-					
+
 				hpos += 64;
 			}
 		}
 		else { // skip segment
 			hpos += len;
-		}		
+		}
 	}
-	
-	
+
+
 	return true;
 }
 
@@ -6153,33 +6182,48 @@ INTERN bool pjg_unoptimize_header( void )
 	
 	unsigned int fpos; // end of marker position
 	unsigned int skip; // bytes to skip
-	unsigned int spos; // sub position	
+	unsigned int spos; // sub position
 	int i;
-	
-	
-	// search for DHT (0xFFC4) & DQT (0xFFDB) marker segments	
+
+	// This routine rewrites hdrdata in place while walking marker segments
+	// whose lengths and skip counts come straight out of the (possibly
+	// malformed) decompressed PJG stream. Every access below is bounded
+	// against hdrsz so a corrupt header can never drive hpos past the
+	// allocation: doing so previously produced out-of-bounds heap writes
+	// that corrupted allocator metadata and crashed on the next free().
+	const unsigned int hdrsz = ( hdrs > 0 ) ? ( unsigned int ) hdrs : 0;
+
+	// search for DHT (0xFFC4) & DQT (0xFFDB) marker segments
 	// header parser loop
 	while ( ( int ) hpos < hdrs ) {
+		// need the 2-byte marker plus the 2-byte length field
+		if ( hpos + 4 > hdrsz ) return pjg_header_error();
 		type = hdrdata[ hpos + 1 ];
 		len = 2 + B_SHORT( hdrdata[ hpos + 2 ], hdrdata[ hpos + 3 ] );
-		
+		// a marker segment must lie fully inside the header
+		if ( len < 4 || hpos + len > hdrsz ) return pjg_header_error();
+
 		if ( type == 0xC4 ) { // for DHT
 			fpos = hpos + len; // reassign length to end position
 			hpos += 4; // skip marker & length
-			while ( hpos < fpos ) {			
+			while ( hpos < fpos ) {
 				hpos++;
+				// need the 1-byte table id plus the 16 count bytes read below
+				if ( hpos + 16 > hdrsz ) return pjg_header_error();
 				// table found - check if modified
-				if ( hdrdata[ hpos ] > 2 ) {	
+				if ( hdrdata[ hpos ] > 2 ) {
 					// reinsert the standard table
 					i = hdrdata[ hpos + 1 ];
+					if ( i < 0 || i >= 4 ) return pjg_header_error(); // bound std table index
+					if ( hpos + std_huff_lengths[ i ] > hdrsz ) return pjg_header_error();
 					for ( spos = 0; spos < std_huff_lengths[ i ]; spos++ ) {
 						hdrdata[ hpos + spos ] = std_huff_tables[ i ][ spos ];
 					}
 				}
-								
+
 				skip = 16;
-				for ( i = 0; i < 16; i++ )		
-					skip += ( int ) hdrdata[ hpos + i ];				
+				for ( i = 0; i < 16; i++ )
+					skip += ( int ) hdrdata[ hpos + i ];
 				hpos += skip;
 			}
 		}
@@ -6187,26 +6231,28 @@ INTERN bool pjg_unoptimize_header( void )
 			fpos = hpos + len; // reassign length to end position
 			hpos += 4; // skip marker & length
 			while ( hpos < fpos ) {
-				i = LBITS( hdrdata[ hpos ], 4 );				
+				if ( hpos >= hdrsz ) return pjg_header_error();
+				i = LBITS( hdrdata[ hpos ], 4 );
 				hpos++;
 				// table found
 				if ( i == 1 ) { // get out for 16 bit precision
 					hpos += 128;
 					continue;
 				}
-				// undo diff coding for 8 bit precision
+				// undo diff coding for 8 bit precision (writes hdrdata[hpos+1..63])
+				if ( hpos + 64 > hdrsz ) return pjg_header_error();
 				for ( spos = 1; spos < 64; spos++ )
 					hdrdata[ hpos + spos ] += hdrdata[ hpos + spos - 1 ];
-					
+
 				hpos += 64;
 			}
 		}
 		else { // skip segment
 			hpos += len;
-		}		
+		}
 	}
-	
-	
+
+
 	return true;
 }
 

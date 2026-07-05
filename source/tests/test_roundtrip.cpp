@@ -54,6 +54,11 @@ const char* kInvalid[] = {
     // Fuzzed PJG that drove model_s::current_order out of bounds -> segfault in
     // totalize_table before the fix (issue #41).
     "issue41_context_order.pjg",
+    // Fuzzed PJG whose decompressed JFIF header has a DQT/DHT segment whose
+    // length drives pjg_unoptimize_header past the hdrdata allocation: an
+    // out-of-bounds heap write that corrupted the allocator and crashed on the
+    // next free() (SIGTRAP/SIGSEGV) before the bounds checks were added.
+    "pjg_header_oob.pjg",
 };
 
 using Bytes = std::vector<std::uint8_t>;

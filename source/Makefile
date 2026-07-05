@@ -83,23 +83,36 @@ test-cli: $(TARGET)
 	@bash $(TESTDIR)/cli_golden.sh ./$(TARGET)
 
 # AddressSanitizer memory-safety regression guard. Builds packJPG with ASan and
-# runs a full compress+decompress round-trip over every fixture. This guards the
-# two memory bugs fixed in this tree:
+# (a) runs a full compress+decompress round-trip over every VALID fixture and
+# (b) decompresses every INVALID fixture (malformed .pjg) to exercise the decode
+# path on hostile input. This guards the memory bugs fixed in this tree:
 #   * the model_b heap-buffer-overflow (aricoder.cpp:629), root-caused to the
 #     padbit char-signedness issue (packjpg.cpp:564);
-#   * the new[]/free() alloc-dealloc mismatch (bitops.cpp get_c_bytes).
-# It is EXPECTED TO PASS (exit 0); any ASan error means a regression. Requires an
-# ASan-capable g++/clang++.  (UBSan is intentionally omitted -- there is a
-# separate, benign negative-shift UB documented in tests/README.md.)
+#   * the new[]/free() alloc-dealloc mismatch (bitops.cpp get_c_bytes);
+#   * the out-of-bounds heap write in pjg_unoptimize_header (packjpg.cpp), which
+#     corrupted the allocator on malformed headers -> crash in free() (see
+#     fixtures/invalid/pjg_header_oob.pjg).
+# For invalid inputs a non-zero exit is fine (rejection); only an actual
+# AddressSanitizer report counts as a failure. It is EXPECTED TO PASS (exit 0);
+# any ASan error means a regression. Requires an ASan-capable g++/clang++.
+# (UBSan is intentionally omitted -- there is a separate, benign negative-shift
+# UB documented in tests/README.md.)
 ASANFLAGS = -std=c++14 -DUNIX -I. -O1 -g -fsanitize=address -fno-omit-frame-pointer
 test-asan:
 	$(CPP) $(ASANFLAGS) $(TEST_ENG) -o $(TESTDIR)/packJPG_asan $(TESTLD)
-	@echo "Running packJPG under AddressSanitizer (compress+decompress, all fixtures)..."
+	@echo "Running packJPG under AddressSanitizer (compress+decompress, valid fixtures)..."
 	@fail=0; for f in $(TESTDIR)/fixtures/valid/*.jpg; do \
 	   d=$$(mktemp -d); cp "$$f" $$d/img.jpg; \
 	   ASAN_OPTIONS=detect_leaks=0 ./$(TESTDIR)/packJPG_asan -p -np $$d/img.jpg >$$d/log 2>&1 || fail=1; \
 	   rm -f $$d/img.jpg; \
 	   ASAN_OPTIONS=detect_leaks=0 ./$(TESTDIR)/packJPG_asan -p -np $$d/img.pjg >>$$d/log 2>&1 || fail=1; \
+	   if grep -q AddressSanitizer $$d/log; then echo "  ASAN-ERROR $$(basename $$f)"; fail=1; \
+	   else echo "  clean      $$(basename $$f)"; fi; rm -rf $$d; \
+	 done; \
+	 echo "Decompressing malformed fixtures under AddressSanitizer (rejection is fine, ASan report is not)..."; \
+	 for f in $(TESTDIR)/fixtures/invalid/*.pjg; do \
+	   d=$$(mktemp -d); cp "$$f" $$d/bad.pjg; \
+	   ASAN_OPTIONS=detect_leaks=0 ./$(TESTDIR)/packJPG_asan -np $$d/bad.pjg >$$d/log 2>&1 || true; \
 	   if grep -q AddressSanitizer $$d/log; then echo "  ASAN-ERROR $$(basename $$f)"; fail=1; \
 	   else echo "  clean      $$(basename $$f)"; fi; rm -rf $$d; \
 	 done; \
