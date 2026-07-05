@@ -9,7 +9,6 @@ reading and writing of arrays
 #include <array>
 #include <cstdio>
 #include <cstdlib>
-#include <experimental/filesystem>
 #include <fstream>
 #include <stdexcept>
 
@@ -455,7 +454,13 @@ void FileWriter::reset() {
 
 std::size_t FileWriter::num_bytes_written() {
 	std::fflush(fptr_);
-	return std::experimental::filesystem::file_size(file_path_);
+	// Measure the on-disk size via a stream seek-to-end rather than
+	// std::(experimental::)filesystem. <experimental/filesystem> was dropped by
+	// modern libc++ (e.g. current macOS/clang), and <filesystem> would force a
+	// C++17 bump plus platform-specific -lstdc++fs linkage; this is portable to
+	// every toolchain and needs only <fstream>, already included above.
+	std::ifstream is{ file_path_, std::ios::binary | std::ios::ate };
+	return is ? static_cast<std::size_t>(is.tellg()) : 0;
 }
 
 bool FileWriter::error() {
