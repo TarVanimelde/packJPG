@@ -1778,8 +1778,14 @@ INTERN void execute( bool (*function)() )
 		
 		// set starttime
 		begin = clock();
-		// call function
-		success = ( *function )();
+		// call function (guard against exceptions from corrupt input, e.g. issue #41)
+		try {
+			success = ( *function )();
+		} catch ( const std::exception& e ) {
+			std::strcpy( errormessage, e.what() );
+			errorlevel = 2;
+			success = false;
+		}
 		// set endtime
 		end = clock();
 		
@@ -1796,9 +1802,14 @@ INTERN void execute( bool (*function)() )
 			if ( verbosity == 2 ) fprintf( msgout,  "%8s", "ERROR" );
 		}
 		#else
-		// call function
-		( *function )();
-		
+		// call function (guard against exceptions from corrupt input, e.g. issue #41)
+		try {
+			( *function )();
+		} catch ( const std::exception& e ) {
+			std::strcpy( errormessage, e.what() );
+			errorlevel = 2;
+		}
+
 		// store errorfunction if needed
 		if ( ( errorlevel > 0 ) && ( errorfunction == NULL ) )
 			errorfunction = function;

@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <functional>
 #include <limits>
+#include <stdexcept>
 
 template <std::uint8_t bit>
 void ArithmeticBitWriter::write_bit() {
@@ -453,6 +454,15 @@ int model_s::convert_int_to_symbol( int c, symbol *s )
 	
 void model_s::get_symbol_scale( symbol *s )
 {
+	// A validly-encoded stream always resolves a symbol at (or above) the order-0
+	// null table, so current_order stays within [0, max_order]. Corrupt input can
+	// force one escape too many, driving current_order negative; without this
+	// guard contexts[current_order] then dereferences a wild pointer and crashes
+	// inside totalize_table (issue #41: fuzzed input, context address 0x31). Treat
+	// an out-of-range order as a corrupt stream and abort decoding cleanly.
+	if ( current_order < 0 || current_order >= int( contexts.size() ) ) {
+		throw std::runtime_error( "corrupt arithmetic-coded stream (context order out of range)" );
+	}
 	// getting the scale is easy: totalize the table_s, use accumulated count -> done
 	totalize_table( contexts[ current_order ] );
 	s->scale = totals[ 0 ];

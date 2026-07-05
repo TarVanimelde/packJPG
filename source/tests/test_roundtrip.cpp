@@ -51,6 +51,9 @@ const char* kValid[] = {
 const char* kInvalid[] = {
     "empty.bin", "not_a_jpeg.txt", "bad_after_soi.jpg",
     "truncated.jpg", "soi_eoi_only.jpg", "fake_pjg.pjg",
+    // Fuzzed PJG that drove model_s::current_order out of bounds -> segfault in
+    // totalize_table before the fix (issue #41).
+    "issue41_context_order.pjg",
 };
 
 using Bytes = std::vector<std::uint8_t>;
