@@ -109,10 +109,10 @@ test-asan:
 	   if grep -q AddressSanitizer $$d/log; then echo "  ASAN-ERROR $$(basename $$f)"; fail=1; \
 	   else echo "  clean      $$(basename $$f)"; fi; rm -rf $$d; \
 	 done; \
-	 echo "Decompressing malformed fixtures under AddressSanitizer (rejection is fine, ASan report is not)..."; \
-	 for f in $(TESTDIR)/fixtures/invalid/*.pjg; do \
-	   d=$$(mktemp -d); cp "$$f" $$d/bad.pjg; \
-	   ASAN_OPTIONS=detect_leaks=0 ./$(TESTDIR)/packJPG_asan -np $$d/bad.pjg >$$d/log 2>&1 || true; \
+	 echo "Feeding malformed fixtures (.pjg decompress + .jpg compress) to AddressSanitizer (rejection is fine, ASan report is not)..."; \
+	 for f in $(TESTDIR)/fixtures/invalid/*.pjg $(TESTDIR)/fixtures/invalid/*.jpg; do \
+	   d=$$(mktemp -d); ext=$${f##*.}; cp "$$f" $$d/bad.$$ext; \
+	   ASAN_OPTIONS=detect_leaks=0 ./$(TESTDIR)/packJPG_asan -np $$d/bad.$$ext >$$d/log 2>&1 || true; \
 	   if grep -q AddressSanitizer $$d/log; then echo "  ASAN-ERROR $$(basename $$f)"; fail=1; \
 	   else echo "  clean      $$(basename $$f)"; fi; rm -rf $$d; \
 	 done; \

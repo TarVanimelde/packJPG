@@ -3786,13 +3786,31 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 				errorlevel = 2;
 				return false;
 			}
-			
+			// The SOF segment must actually carry all declared component specs:
+			// 6 bytes of frame header (already consumed below) plus 3 bytes per
+			// component. Without this a truncated SOF would over-read `segment`.
+			if ( len < 10 + ( 3 * (unsigned int) cmpc ) ) {
+				sprintf( errormessage, "size mismatch in sof marker" );
+				errorlevel = 2;
+				return false;
+			}
+
 			hpos += 6;
 			// components contained in image
 			for ( cmp = 0; cmp < cmpc; cmp++ ) {
 				cmpnfo[ cmp ].jid = segment[ hpos ];
 				cmpnfo[ cmp ].sfv = LBITS( segment[ hpos + 1 ], 4 );
-				cmpnfo[ cmp ].sfh = RBITS( segment[ hpos + 1 ], 4 );				
+				cmpnfo[ cmp ].sfh = RBITS( segment[ hpos + 1 ], 4 );
+				// The quantization-table selector (JPEG "Tq") must be 0..3; a
+				// value out of range would index qtables[4][64] out of bounds and
+				// hand back a wild pointer that is dereferenced later (issues
+				// #23/#32, and the follow-on SEGVs #27/#35).
+				if ( segment[ hpos + 2 ] >= 4 ) {
+					sprintf( errormessage, "quantization table index %i out of range (0..3)",
+						segment[ hpos + 2 ] );
+					errorlevel = 2;
+					return false;
+				}
 				cmpnfo[ cmp ].qtable = qtables[ segment[ hpos + 2 ] ];
 				hpos += 3;
 			}

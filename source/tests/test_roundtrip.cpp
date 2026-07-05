@@ -64,6 +64,11 @@ const char* kInvalid[] = {
     // bits forever, so pjg_decode_generic looped (and grew) indefinitely -> a DoS
     // hang. Must now be rejected promptly; if this test hangs, that fix regressed.
     "pjg_truncated_hang.pjg",
+    // JPEG whose SOF component quantization-table selector (Tq) is 4 (valid range
+    // 0..3). It indexed qtables[4][64] out of bounds and handed back a wild
+    // pointer dereferenced in jpg_setup_imginfo -> global-buffer-overflow under
+    // ASan (upstream issues #23/#32, follow-on SEGVs #27/#35).
+    "jpg_qtable_index_oob.jpg",
 };
 
 using Bytes = std::vector<std::uint8_t>;

@@ -167,6 +167,20 @@ boundary instead.
    Regression fixture: `fixtures/invalid/pjg_truncated_hang.pjg` (a valid PJG
    truncated to 40 bytes; the test would *hang* if this regressed).
 
+8. **Out-of-bounds `qtables` index in `jpg_parse_jfif` / `jpg_setup_imginfo`
+   (`packjpg.cpp`) — FIXED (upstream issues #23, #27, #32, #35).** On the
+   compress path the SOF component descriptor's quantization-table selector
+   (JPEG `Tq`, `segment[hpos+2]`) was used directly to index `qtables[4][64]`
+   with no range check. A `Tq >= 4` produced a wild `cmpnfo[cmp].qtable`
+   pointer that was then dereferenced in `jpg_setup_imginfo` (`qtable[0]`),
+   which Linux ASan reports as a global-buffer-overflow "0 bytes after global
+   variable 'qtables'" and which SEGVs for larger indices. **Fix:** reject
+   `Tq >= 4`, and also require the SOF segment to actually contain its declared
+   `6 + 3*Nf` component bytes (so a truncated SOF can't over-read `segment`).
+   Regression fixture: `fixtures/invalid/jpg_qtable_index_oob.jpg` (a valid
+   grayscale JPEG with its component `Tq` byte set to 4); `make test-asan` now
+   also feeds the malformed `.jpg` fixtures to ASan.
+
 ## Notes / limitations
 
 * The shipped `docs/sample_images.zip` contains only PNG coefficient dumps, not
