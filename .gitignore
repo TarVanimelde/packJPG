@@ -44,3 +44,11 @@
 *.coll?
 *.zdst?
 *.dist
+
+# --- test suite ---
+# Built test binaries (produced by `make test` / `make test-asan`).
+source/tests/run_tests
+source/tests/packJPG_asan
+# ...but DO keep the committed test fixtures, despite the *.jpg / *.pjg ignores above.
+!source/tests/fixtures/
+!source/tests/fixtures/**
