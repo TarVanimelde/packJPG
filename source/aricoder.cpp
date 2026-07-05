@@ -236,8 +236,15 @@ unsigned char ArithmeticDecoder::read_bit()
 {
 	// read in new byte if needed
 	if ( cbit == 0 ) {
-		if ( !reader_.read_byte(&bbyte)) // read next byte if available
+		if ( !reader_.read_byte(&bbyte)) { // read next byte if available
 			bbyte = 0; // if no more data is left in the stream
+			// Count zero bytes fabricated past the end of the real input. A
+			// valid stream needs at most one coder register (CODER_USE_BITS)
+			// of trailing zeros to flush its last symbol; once we exceed that
+			// margin the decoder can only spin, so flag the stream exhausted.
+			if ( ++pad_bytes_ > ( CODER_USE_BITS / 8 ) + 1 )
+				ran_out_ = true;
+		}
 		cbit = 8;
 	}
 	

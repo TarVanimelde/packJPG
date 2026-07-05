@@ -5976,13 +5976,26 @@ INTERN bool pjg_decode_generic( ArithmeticDecoder* dec, unsigned char** data, in
 	
 	// decode header, ending with 256 symbol
 	model = INIT_MODEL_S( 256 + 1, 256, 1 );
+	bool exhausted = false;
 	while ( true ) {
 		c = decode_ari( dec, model );
 		if ( c == 256 ) break;
+		// A well-formed stream terminates with the 256 symbol before its bits
+		// run out. If the decoder is now only reading fabricated zero-padding
+		// the terminator will never arrive, so bail instead of looping (and
+		// growing bwrt) forever on truncated / corrupt input.
+		if ( dec->ran_out() ) { exhausted = true; break; }
 		bwrt->write_byte( (unsigned char) c );
 		model->shift_context( c );
 	}
 	delete( model );
+
+	if ( exhausted ) {
+		delete bwrt;
+		sprintf( errormessage, "truncated arithmetic stream in header" );
+		errorlevel = 2;
+		return false;
+	}
 
 	// check for out of memory
 	if ( bwrt->error() ) {

@@ -153,6 +153,20 @@ boundary instead.
    `recode_jpeg` with half-initialized state). Regression fixture:
    `fixtures/invalid/pjg_header_oob.pjg`.
 
+7. **Infinite loop / DoS in `pjg_decode_generic` on truncated input — FIXED.**
+   `ArithmeticDecoder::read_bit` fabricates zero bits forever once the input is
+   exhausted (by design, so the final symbol can flush). The generic header
+   decoder loops `while(true)` until it sees the `256` terminator symbol; a
+   truncated/corrupt stream never emits it, so the loop spun forever while
+   growing its output buffer — a denial-of-service on untrusted input (~12% of
+   fuzzed `.pjg` mutants hung >2 s). **Fix:** the decoder now tracks how many
+   zero bytes it has fabricated past end-of-input and exposes `ran_out()` once it
+   exceeds the coder-register flush margin (`CODER_USE_BITS`); `pjg_decode_generic`
+   checks it and rejects the stream instead of looping. Valid streams reach the
+   `256` terminator well within the margin, so round-trips are unaffected.
+   Regression fixture: `fixtures/invalid/pjg_truncated_hang.pjg` (a valid PJG
+   truncated to 40 bytes; the test would *hang* if this regressed).
+
 ## Notes / limitations
 
 * The shipped `docs/sample_images.zip` contains only PNG coefficient dumps, not

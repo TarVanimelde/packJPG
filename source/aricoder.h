@@ -204,15 +204,25 @@ class ArithmeticDecoder {
 	~ArithmeticDecoder() {}
 	unsigned int decode_count( symbol* s );
 	void decode( symbol* s );
-	
+
+	// True once the input stream has been exhausted and the decoder is only
+	// consuming fabricated zero-padding. A valid stream needs at most a coder
+	// register worth of trailing zeros to flush its final symbol; past that
+	// margin no further real symbols can be decoded, so callers driving
+	// data-terminated loops (e.g. pjg_decode_generic) can stop instead of
+	// spinning forever on truncated / corrupt input.
+	bool ran_out() const { return ran_out_; }
+
 	private:
 	unsigned char read_bit();
-	
+
 	// i/o variables
     Reader& reader_;
 	unsigned char bbyte = 0;
 	unsigned char cbit = 0;
-	
+	unsigned int pad_bytes_ = 0; // zero bytes fabricated past end of input
+	bool ran_out_ = false;       // input exhausted past the coder flush margin
+
 	// arithmetic coding variables
 	unsigned int ccode = 0;
 	unsigned int clow = 0;

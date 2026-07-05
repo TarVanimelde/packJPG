@@ -59,6 +59,11 @@ const char* kInvalid[] = {
     // out-of-bounds heap write that corrupted the allocator and crashed on the
     // next free() (SIGTRAP/SIGSEGV) before the bounds checks were added.
     "pjg_header_oob.pjg",
+    // Valid PJG truncated to 40 bytes: the arithmetic stream runs out before the
+    // generic header decoder sees its 256 terminator. read_bit used to feed zero
+    // bits forever, so pjg_decode_generic looped (and grew) indefinitely -> a DoS
+    // hang. Must now be rejected promptly; if this test hangs, that fix regressed.
+    "pjg_truncated_hang.pjg",
 };
 
 using Bytes = std::vector<std::uint8_t>;
