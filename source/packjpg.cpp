@@ -561,7 +561,12 @@ INTERN unsigned int*  scnp             =   NULL;   // scan start positions in hu
 INTERN int            rstc             =    0  ;   // count of restart markers
 INTERN int            scnc             =    0  ;   // count of scans
 INTERN int            rsti             =    0  ;   // restart interval
-INTERN char           padbit           =    -1 ;   // padbit (for huffman coding)
+INTERN signed char    padbit           =    -1 ;   // padbit (for huffman coding); -1 = unset.
+// NOTE: must be *signed* char. Plain `char` is unsigned on some platforms (e.g.
+// ARM/aarch64), which stores the -1 "unset" sentinel as 255 and makes the guard
+// `if (padbit == -1) padbit = 1` (in pack_pjg) silently fail. That let an unset
+// padbit (255) be encoded as a 1-bit symbol via a binary model, overflowing
+// model_b's 2-entry count table (heap-buffer-overflow at aricoder.cpp:629).
 INTERN unsigned char* rst_err          =   NULL;   // number of wrong-set RST markers per scan
 
 INTERN unsigned char* zdstdata[4]      = { NULL }; // zero distribution (# of non-zeroes) lists (for higher 7x7 block)
