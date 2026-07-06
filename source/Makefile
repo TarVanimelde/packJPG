@@ -151,6 +151,14 @@ test-ubsan:
 	     grep "runtime error:" $$d/log | head -2 | sed 's/^/    /'; fail=1; \
 	   else echo "  clean      $$(basename $$f)"; fi; rm -rf $$d; \
 	 done; \
+	 echo "Feeding malformed fixtures to UndefinedBehaviorSanitizer (guards the corrupt-input UB, e.g. oversized Huffman-size shifts)..."; \
+	 for f in $(TESTDIR)/fixtures/invalid/*.jpg $(TESTDIR)/fixtures/invalid/*.pjg; do \
+	   d=$$(mktemp -d); ext=$${f##*.}; cp "$$f" $$d/bad.$$ext; \
+	   UBSAN_OPTIONS=halt_on_error=0 ./$(TESTDIR)/packJPG_ubsan -np $$d/bad.$$ext >$$d/log 2>&1 || true; \
+	   if grep -q "runtime error:" $$d/log; then echo "  UBSAN-ERROR $$(basename $$f)"; \
+	     grep "runtime error:" $$d/log | head -2 | sed 's/^/    /'; fail=1; \
+	   else echo "  clean      $$(basename $$f)"; fi; rm -rf $$d; \
+	 done; \
 	 if [ $$fail -eq 0 ]; then echo "test-ubsan: PASS (no undefined behavior)"; else echo "test-ubsan: FAIL"; exit 1; fi
 
 fixtures:

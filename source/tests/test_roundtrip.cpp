@@ -79,6 +79,10 @@ const char* kInvalid[] = {
     // of the hdrdata buffer -> heap-buffer-overflow READ under ASan (upstream
     // issues #26/#33). `make test-asan` is the guard.
     "jpg_dht_overflow.jpg",
+    // Fuzzed JPEG whose corrupt DC Huffman table decodes an out-of-range size
+    // code s (> 15), which drove oversized shifts `1 << s` / read(s) with s > 31
+    // -> undefined behavior under UBSan. `make test-ubsan` is the guard.
+    "jpg_dc_size_ub.jpg",
 };
 
 using Bytes = std::vector<std::uint8_t>;

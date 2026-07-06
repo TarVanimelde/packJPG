@@ -129,12 +129,17 @@ boundary instead.
      two's-complement result). `make test-ubsan` round-trips every valid fixture
      under UBSan as the regression guard.
 
-   NOTE (separate, still-open): fuzzing under UBSan surfaces a *different* class
-   that only fires on **malformed** input -- an out-of-range Huffman size code
-   `s` (0..255 from corrupt data) drives oversized shifts `1 << s` and
-   `BitReader::read(s)` with `s > 31` (`packjpg.cpp:4028/4132`, `bitops.cpp:50`).
-   That needs bounding `s` to the valid range (<= 15) after decoding and is left
-   as a documented follow-up.
+   A second UB class that only fires on **malformed** input was also FIXED: an
+   out-of-range DC Huffman size code `s` (0..255 from corrupt data) drove
+   oversized shifts `1 << s` and `BitReader::read(s)` with `s > 31`
+   (`packjpg.cpp:4028/4132`, `bitops.cpp:50`); the two DC decoders now reject
+   `s > 15` (impossible for an 8-bit JPEG). Fuzzing also caught an out-of-bounds
+   read in the SOS parser -- `for (cmp = 0; segment[hpos] != cmpnfo[cmp].jid &&
+   cmp < cmpc; cmp++)` evaluated `cmpnfo[cmp]` before the `cmp < cmpc` bound, so
+   a component-id with no match read `cmpnfo[cmpc]` (index 4 of a size-4 array);
+   the operands are now swapped so the bound is checked first. `make test-ubsan`
+   now also feeds the malformed fixtures to UBSan; the regression fixture is
+   `fixtures/invalid/jpg_dc_size_ub.jpg`.
 
 4. **`packJPG` returns exit code 0 even on error.** The CLI prints an error
    summary but still exits 0 (observed on every malformed input). The reliable

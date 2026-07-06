@@ -3752,7 +3752,7 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 			}
 			hpos++;
 			for ( i = 0; i < cs_cmpc; i++ ) {
-				for ( cmp = 0; ( segment[ hpos ] != cmpnfo[ cmp ].jid ) && ( cmp < cmpc ); cmp++ );
+				for ( cmp = 0; ( cmp < cmpc ) && ( segment[ hpos ] != cmpnfo[ cmp ].jid ); cmp++ );
 				if ( cmp == cmpc ) {
 					snprintf( errormessage, MSG_SIZE, "component id mismatch in start-of-scan" );
 					errorlevel = 2;
@@ -4024,6 +4024,9 @@ INTERN int jpg_decode_block_seq( BitReader* huffr, huffTree* dctree, huffTree* a
 	hc = jpg_next_huffcode( huffr, dctree );
 	if ( hc < 0 ) return -1; // return error
 	else s = ( unsigned char ) hc;
+	// a DC magnitude category > 15 is impossible for an 8-bit JPEG; reject a
+	// corrupt one so it cannot drive an oversized 1<<s / read(s) shift (UB)
+	if ( s > 15 ) return -1;
 	n = huffr->read( s );	
 	block[ 0 ] = DEVLI( s, n );
 	
@@ -4128,6 +4131,9 @@ INTERN int jpg_decode_dc_prg_fs( BitReader* huffr, huffTree* dctree, short* bloc
 	hc = jpg_next_huffcode( huffr, dctree );
 	if ( hc < 0 ) return -1; // return error
 	else s = ( unsigned char ) hc;
+	// a DC magnitude category > 15 is impossible for an 8-bit JPEG; reject a
+	// corrupt one so it cannot drive an oversized 1<<s / read(s) shift (UB)
+	if ( s > 15 ) return -1;
 	n = huffr->read( s );	
 	block[ 0 ] = DEVLI( s, n );
 	
