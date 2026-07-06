@@ -195,6 +195,18 @@ boundary instead.
    flags these via `truncated.jpg`, `jpg_decode_huffr_leak.jpg`, and the `.pjg`
    fixtures respectively. (LeakSanitizer is Linux-only.)
 
+10. **`errormessage[128]` global-buffer-overflow (`packjpg.cpp`) — FIXED
+    (upstream issue #30).** The fixed-size global `errormessage` (`MSG_SIZE` =
+    128) was written with unbounded `sprintf(errormessage, "...%s...", name)`
+    and `strcpy(errormessage, e.what())`, so a filename or exception string
+    longer than 128 bytes overran it into the adjacent `errorlevel` global
+    (ASan: "global-buffer-overflow ... 0 bytes after global variable
+    'errormessage'"). Two of those sites even passed `e.what()` as the *format
+    string* (a latent format-string bug). **Fix:** every write into
+    `errormessage` now goes through `snprintf(errormessage, MSG_SIZE, ...)`,
+    and the `e.what()` sites use an explicit `"%s"`. `make test-asan` feeds the
+    CLI an over-long filename as the regression guard.
+
 ## Notes / limitations
 
 * The shipped `docs/sample_images.zip` contains only PNG coefficient dumps, not

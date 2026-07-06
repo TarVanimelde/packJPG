@@ -96,7 +96,10 @@ test-cli: $(TARGET)
 #   * the qtables out-of-bounds index (jpg_setup_imginfo, see
 #     fixtures/invalid/jpg_qtable_index_oob.jpg);
 #   * leaks on error paths (read_jpeg `segment`, decode_jpeg `huffr`, unpack_pjg
-#     `decoder`) reported by LeakSanitizer as issues #29 / #34.
+#     `decoder`) reported by LeakSanitizer as issues #29 / #34;
+#   * the errormessage[128] global-buffer-overflow from unbounded sprintf/strcpy
+#     of long filenames / exception text (issue #30), guarded by feeding the CLI
+#     an over-long filename below.
 # For invalid inputs a non-zero exit is fine (rejection); only an actual ASan or
 # LeakSanitizer report counts as a failure. It is EXPECTED TO PASS (exit 0); any
 # such report means a regression. Requires a Linux ASan-capable g++/clang++
@@ -121,6 +124,11 @@ test-asan:
 	   if grep -qE "AddressSanitizer|LeakSanitizer" $$d/log; then echo "  ASAN-ERROR $$(basename $$f)"; fail=1; \
 	   else echo "  clean      $$(basename $$f)"; fi; rm -rf $$d; \
 	 done; \
+	 echo "Feeding an over-long filename to the CLI error path under ASan (issue #30: errormessage[128] overflow)..."; \
+	 d=$$(mktemp -d); longname="nonexistent_$$(head -c 200 /dev/zero | tr '\0' A)"; \
+	 ASAN_OPTIONS=detect_leaks=1 ./$(TESTDIR)/packJPG_asan -np "$$d/$$longname" >$$d/log 2>&1 || true; \
+	 if grep -qE "AddressSanitizer|LeakSanitizer" $$d/log; then echo "  ASAN-ERROR long-filename"; fail=1; \
+	 else echo "  clean      long-filename (#30 guard)"; fi; rm -rf $$d; \
 	 if [ $$fail -eq 0 ]; then echo "test-asan: PASS (no memory errors)"; else echo "test-asan: FAIL"; exit 1; fi
 
 fixtures:

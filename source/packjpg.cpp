@@ -723,7 +723,7 @@ INTERN const char   pjg_magic[] = { 'J', 'S' };
 #if !defined(BUILD_LIB)
 int main( int argc, char** argv )
 {	
-	sprintf( errormessage, "no errormessage specified" );
+	snprintf( errormessage, MSG_SIZE, "no errormessage specified" );
 	
 	clock_t begin, end;
 	
@@ -1022,7 +1022,7 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
             try {
                 str_in = std::make_unique<FileReader>((char*)in_src);
             } catch (const std::runtime_error&) {
-                sprintf(errormessage, "error opening input file %s", (char*)in_src);
+                snprintf( errormessage, MSG_SIZE, "error opening input file %s", (char*)in_src);
 		        errorlevel = 2;
 		        return;
             }
@@ -1034,13 +1034,13 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
 			try {
 				str_in = std::make_unique<StreamReader>();
 			} catch (const std::runtime_error& e) {
-				sprintf(errormessage, e.what());
+				snprintf( errormessage, MSG_SIZE, "%s", e.what());
 				errorlevel = 2;
 				return;
 			}
             break;
         default:
-            sprintf(errormessage, "Invalid input type: %i", in_type);
+            snprintf( errormessage, MSG_SIZE, "Invalid input type: %i", in_type);
 		    errorlevel = 2;
 		    return;
     }
@@ -1050,7 +1050,7 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
             try {
                 str_out = std::make_unique<FileWriter>((char*)out_dest);
             } catch (const std::runtime_error&) {
-                sprintf(errormessage, "error opening output file %s", (char*)out_dest);
+                snprintf( errormessage, MSG_SIZE, "error opening output file %s", (char*)out_dest);
 		        errorlevel = 2;
 		        return;
             }
@@ -1062,13 +1062,13 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
 			try {
 				str_out = std::make_unique<StreamWriter>();
 			} catch (const std::runtime_error& e) {
-				sprintf(errormessage, e.what());
+				snprintf( errormessage, MSG_SIZE, "%s", e.what());
 				errorlevel = 2;
 				return;
 			}
             break;
         default:
-            sprintf(errormessage, "Invalid output type: %i", out_type);
+            snprintf( errormessage, MSG_SIZE, "Invalid output type: %i", out_type);
 		    errorlevel = 2;
 		    return;
     }
@@ -1106,7 +1106,7 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
 	else {
 		// file is neither
 		filetype = F_UNK;
-		sprintf( errormessage, "filetype of input stream is unknown" );
+		snprintf( errormessage, MSG_SIZE, "filetype of input stream is unknown" );
 		errorlevel = 2;
 		return;
 	}
@@ -1782,7 +1782,7 @@ INTERN void execute( bool (*function)() )
 		try {
 			success = ( *function )();
 		} catch ( const std::exception& e ) {
-			std::strcpy( errormessage, e.what() );
+			snprintf( errormessage, MSG_SIZE, "%s", e.what() );
 			errorlevel = 2;
 			success = false;
 		}
@@ -1806,7 +1806,7 @@ INTERN void execute( bool (*function)() )
 		try {
 			( *function )();
 		} catch ( const std::exception& e ) {
-			std::strcpy( errormessage, e.what() );
+			snprintf( errormessage, MSG_SIZE, "%s", e.what() );
 			errorlevel = 2;
 		}
 
@@ -1839,7 +1839,7 @@ INTERN bool check_file( void )
 			str_in = std::make_unique<FileReader>(std::string(filename));
 		}
 	} catch (const std::runtime_error& e) {
-		std::strcpy(errormessage, e.what());
+		snprintf( errormessage, MSG_SIZE, "%s", e.what() );
 		errorlevel = 2;
 		return false;
 	}
@@ -1857,7 +1857,7 @@ INTERN bool check_file( void )
 	// immediately return error if 2 bytes can't be read
 	if ( str_in->read( fileid, 2 ) != 2 ) { 
 		filetype = F_UNK;
-		sprintf( errormessage, "file doesn't contain enough data" );
+		snprintf( errormessage, MSG_SIZE, "file doesn't contain enough data" );
 		errorlevel = 2;
 		return false;
 	}
@@ -1886,7 +1886,7 @@ INTERN bool check_file( void )
 				str_out = std::make_unique<FileWriter>(std::string(pjgfilename));
 			}
 		} catch (const std::runtime_error& e) {
-			std::strcpy(errormessage, e.what());
+			snprintf( errormessage, MSG_SIZE, "%s", e.what() );
             errorlevel = 2;
             return false;
 		}
@@ -1932,7 +1932,7 @@ INTERN bool check_file( void )
 	else {
 		// file is neither
 		filetype = F_UNK;
-		sprintf( errormessage, "filetype of file \"%s\" is unknown", filename );
+		snprintf( errormessage, MSG_SIZE, "filetype of file \"%s\" is unknown", filename );
 		errorlevel = 2;
 		return false;		
 	}
@@ -1976,15 +1976,15 @@ INTERN bool swap_streams( void )
 INTERN bool compare_output( void )
 {
     if (str_out->error()) {
-        sprintf(errormessage, "error in comparison stream");
+        snprintf( errormessage, MSG_SIZE, "error in comparison stream");
         errorlevel = 2;
         return false;
     } else if (str_in->error()) {
-        sprintf(errormessage, "error in output stream");
+        snprintf( errormessage, MSG_SIZE, "error in output stream");
         errorlevel = 2;
         return false;
     } else if (str_str->error()) {
-        sprintf(errormessage, "error in input stream");
+        snprintf( errormessage, MSG_SIZE, "error in input stream");
         errorlevel = 2;
         return false;
     }
@@ -1993,7 +1993,7 @@ INTERN bool compare_output( void )
     const auto orig_data = str_str->get_data();
     
 	if (verif_data.size() != orig_data.size()) {
-		sprintf( errormessage, "file sizes do not match" );
+		snprintf( errormessage, MSG_SIZE, "file sizes do not match" );
 		errorlevel = 2;
 		return false;
 	}
@@ -2003,7 +2003,7 @@ INTERN bool compare_output( void )
 	                                  std::end(verif_data));
 	if (result.first != std::end(orig_data) || result.second != std::end(verif_data)) {
 		const auto first_diff = std::distance(std::begin(orig_data), result.first);
-        sprintf( errormessage, "difference found at 0x%ld", first_diff );
+        snprintf( errormessage, MSG_SIZE, "difference found at 0x%ld", first_diff );
 		errorlevel = 2;
 		return false;
 	}
@@ -2144,7 +2144,7 @@ INTERN bool read_jpeg( void )
 	// alloc memory for segment data first
 	segment = ( unsigned char* ) calloc( ssize, sizeof( char ) );
 	if ( segment == NULL ) {
-		sprintf( errormessage, MEM_ERRMSG );
+		snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
 	}
@@ -2190,7 +2190,7 @@ INTERN bool read_jpeg( void )
 							if ( rst_err == NULL ) {
 								rst_err = (unsigned char*) calloc( scnc + 1, sizeof( char ) );
 								if ( rst_err == NULL ) {
-									sprintf( errormessage, MEM_ERRMSG );
+									snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 									errorlevel = 2;
 									return false;
 								}
@@ -2200,12 +2200,12 @@ INTERN bool read_jpeg( void )
 							// realloc and set only if needed
 							rst_err = ( unsigned char* ) frealloc( rst_err, ( scnc + 1 ) * sizeof( char ) );
 							if ( rst_err == NULL ) {
-								sprintf( errormessage, MEM_ERRMSG );
+								snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 								errorlevel = 2;
 								return false;
 							}
 							if ( crst > 255 ) {
-								sprintf( errormessage, "Severe false use of RST markers (%i)", (int) crst );
+								snprintf( errormessage, MSG_SIZE, "Severe false use of RST markers (%i)", (int) crst );
 								errorlevel = 1;
 								crst = 255;
 							}
@@ -2230,7 +2230,7 @@ INTERN bool read_jpeg( void )
 			if ( str_in->read( segment, 2 ) != 2 ) break;
 			if ( segment[ 0 ] != 0xFF ) {
 				// ugly fix for incorrect marker segment sizes
-				sprintf( errormessage, "size mismatch in marker segment FF %2X", type );
+				snprintf( errormessage, MSG_SIZE, "size mismatch in marker segment FF %2X", type );
 				errorlevel = 2;
 				if ( type == 0xFE ) { //  if last marker was COM try again
 					if ( str_in->read( segment, 2 ) != 2 ) break;
@@ -2269,7 +2269,7 @@ INTERN bool read_jpeg( void )
 		if ( ssize < len ) {
 			segment = ( unsigned char* ) frealloc( segment, len );
 			if ( segment == NULL ) {
-				sprintf( errormessage, MEM_ERRMSG );
+				snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 				errorlevel = 2;
 				delete ( hdrw );
 				delete ( huffw );
@@ -2291,7 +2291,7 @@ INTERN bool read_jpeg( void )
 	
 	// check if everything went OK
 	if ( ( hdrs == 0 ) || ( hufs == 0 ) ) {
-		sprintf( errormessage, "unexpected end of data encountered" );
+		snprintf( errormessage, MSG_SIZE, "unexpected end of data encountered" );
 		errorlevel = 2;
 		free( segment ); // do not leak the segment buffer on this error path
 		return false;
@@ -2417,7 +2417,7 @@ INTERN bool merge_jpeg( void )
 	
 	// errormessage if write error
 	if ( str_out->error() ) {
-		sprintf( errormessage, "write error, possibly drive is full" );
+		snprintf( errormessage, MSG_SIZE, "write error, possibly drive is full" );
 		errorlevel = 2;		
 		return false;
 	}
@@ -2485,7 +2485,7 @@ INTERN bool decode_jpeg( void )
 			if ( ( ( jpegtype == 1 || ( ( cs_cmpc > 1 || cs_to == 0 ) && cs_sah == 0 ) ) && htset[ 0 ][ cmpnfo[cmp].huffdc ] == 0 ) || 
 			   ( jpegtype == 1 && htset[ 1 ][ cmpnfo[cmp].huffdc ] == 0 ) ||
 			   ( cs_cmpc == 1 && cs_to > 0 && cs_sah == 0 && htset[ 1 ][ cmpnfo[cmp].huffac ] == 0 ) ) {
-				sprintf( errormessage, "huffman table missing in scan%i", scnc );
+				snprintf( errormessage, MSG_SIZE, "huffman table missing in scan%i", scnc );
 				delete huffr;
 				errorlevel = 2;
 				return false;
@@ -2534,7 +2534,7 @@ INTERN bool decode_jpeg( void )
 						
 						// check for non optimal coding
 						if ( ( eob > 1 ) && ( block[ eob - 1 ] == 0 ) ) {
-							sprintf( errormessage, "reconstruction of inefficient coding not supported" );
+							snprintf( errormessage, MSG_SIZE, "reconstruction of inefficient coding not supported" );
 							errorlevel = 1;
 						}
 						
@@ -2601,7 +2601,7 @@ INTERN bool decode_jpeg( void )
 						
 						// check for non optimal coding
 						if ( ( eob > 1 ) && ( block[ eob - 1 ] == 0 ) ) {
-							sprintf( errormessage, "reconstruction of inefficient coding not supported" );
+							snprintf( errormessage, MSG_SIZE, "reconstruction of inefficient coding not supported" );
 							errorlevel = 1;
 						}
 						
@@ -2671,7 +2671,7 @@ INTERN bool decode_jpeg( void )
 									// check for non optimal coding
 									if ( ( eob == cs_from )  && ( peobrun > 0 ) &&
 										( peobrun <	hcodes[ 1 ][ cmpnfo[cmp].huffac ].max_eobrun - 1 ) ) {
-										sprintf( errormessage,
+										snprintf( errormessage, MSG_SIZE,
 											"reconstruction of inefficient coding not supported" );
 										errorlevel = 1;
 									}
@@ -2711,7 +2711,7 @@ INTERN bool decode_jpeg( void )
 									// check for non optimal coding
 									if ( ( eob == cs_from ) && ( peobrun > 0 ) &&
 										( peobrun < hcodes[ 1 ][ cmpnfo[cmp].huffac ].max_eobrun - 1 ) ) {
-										sprintf( errormessage,
+										snprintf( errormessage, MSG_SIZE,
 											"reconstruction of inefficient coding not supported" );
 										errorlevel = 1;
 									}
@@ -2743,7 +2743,7 @@ INTERN bool decode_jpeg( void )
 			// unpad huffman reader / check padbit
 			if ( padbit != -1 ) {
 				if ( padbit != huffr->unpad( padbit ) ) {
-					sprintf( errormessage, "inconsistent use of padbits" );
+					snprintf( errormessage, MSG_SIZE, "inconsistent use of padbits" );
 					padbit = 1;
 					errorlevel = 1;
 				}
@@ -2754,7 +2754,7 @@ INTERN bool decode_jpeg( void )
 			
 			// evaluate status
 			if ( sta == -1 ) { // status -1 means error
-				sprintf( errormessage, "decode error in scan%i / mcu%i",
+				snprintf( errormessage, MSG_SIZE, "decode error in scan%i / mcu%i",
 					scnc, ( cs_cmpc > 1 ) ? mcu : dpos );
 				delete huffr;
 				errorlevel = 2;
@@ -2770,13 +2770,13 @@ INTERN bool decode_jpeg( void )
 	
 	// check for missing data
 	if ( huffr->peof() > 0 ) {
-		sprintf( errormessage, "coded image data truncated / too short" );
+		snprintf( errormessage, MSG_SIZE, "coded image data truncated / too short" );
 		errorlevel = 1;
 	}
 	
 	// check for surplus data
 	if ( !huffr->eof()) {
-		sprintf( errormessage, "surplus data found after coded image data" );
+		snprintf( errormessage, MSG_SIZE, "surplus data found after coded image data" );
 		errorlevel = 1;
 	}
 	
@@ -2849,7 +2849,7 @@ INTERN bool recode_jpeg( void )
 		if ( scnp == NULL ) scnp = ( unsigned int* ) calloc( scnc + 2, sizeof( int ) );
 		else scnp = ( unsigned int* ) frealloc( scnp, ( scnc + 2 ) * sizeof( int ) );
 		if ( scnp == NULL ) {
-			sprintf( errormessage, MEM_ERRMSG );
+			snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 			errorlevel = 2;
 			return false;
 		}
@@ -2861,7 +2861,7 @@ INTERN bool recode_jpeg( void )
 			if ( rstp == NULL ) rstp = ( unsigned int* ) calloc( tmp + 1, sizeof( int ) );
 			else rstp = ( unsigned int* ) frealloc( rstp, ( tmp + 1 ) * sizeof( int ) );
 			if ( rstp == NULL ) {
-				sprintf( errormessage, MEM_ERRMSG );
+				snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 				errorlevel = 2;
 				return false;
 			}
@@ -3075,7 +3075,7 @@ INTERN bool recode_jpeg( void )
 			
 			// evaluate status
 			if ( sta == -1 ) { // status -1 means error
-				sprintf( errormessage, "encode error in scan%i / mcu%i",
+				snprintf( errormessage, MSG_SIZE, "encode error in scan%i / mcu%i",
 					scnc, ( cs_cmpc > 1 ) ? mcu : dpos );
 				delete huffw;
 				errorlevel = 2;
@@ -3232,7 +3232,7 @@ INTERN bool check_value_range( void )
 		for ( dpos = 0; dpos < cmpnfo[cmp].bc; dpos++ )
 		if ( ( colldata[cmp][bpos][dpos] > absmax ) ||
 			 ( colldata[cmp][bpos][dpos] < -absmax ) ) {
-			sprintf( errormessage, "value out of range error: cmp%i, frq%i, val %i, max %i",
+			snprintf( errormessage, MSG_SIZE, "value out of range error: cmp%i, frq%i, val %i, max %i",
 					cmp, bpos, colldata[cmp][bpos][dpos], absmax );
 			errorlevel = 2;
 			return false;
@@ -3398,7 +3398,7 @@ INTERN bool pack_pjg( void )
 	
 	// errormessage if write error
 	if ( str_out->error() ) {
-		sprintf( errormessage, "write error, possibly drive is full" );
+		snprintf( errormessage, MSG_SIZE, "write error, possibly drive is full" );
 		errorlevel = 2;		
 		return false;
 	}
@@ -3434,7 +3434,7 @@ INTERN bool unpack_pjg( void )
 		else if ( hcode >= 0x14 ) {
 			// compare version number
 			if ( hcode != appversion ) {
-				sprintf( errormessage, "incompatible file, use %s v%i.%i",
+				snprintf( errormessage, MSG_SIZE, "incompatible file, use %s v%i.%i",
 					appname, hcode / 10, hcode % 10 );
 				errorlevel = 2;
 				return false;
@@ -3442,7 +3442,7 @@ INTERN bool unpack_pjg( void )
 			else break;
 		}
 		else {
-			sprintf( errormessage, "unknown header code, use newer version of %s", appname );
+			snprintf( errormessage, MSG_SIZE, "unknown header code, use newer version of %s", appname );
 			errorlevel = 2;
 			return false;
 		}
@@ -3540,7 +3540,7 @@ INTERN bool jpg_setup_imginfo( void )
 	
 	// check if information is complete
 	if ( cmpc == 0 ) {
-		sprintf( errormessage, "header contains incomplete information" );
+		snprintf( errormessage, MSG_SIZE, "header contains incomplete information" );
 		errorlevel = 2;
 		return false;
 	}
@@ -3550,7 +3550,7 @@ INTERN bool jpg_setup_imginfo( void )
 			 ( cmpnfo[cmp].qtable == NULL ) ||
 			 ( cmpnfo[cmp].qtable[0] == 0 ) ||
 			 ( jpegtype == 0 ) ) {
-			sprintf( errormessage, "header information is incomplete" );
+			snprintf( errormessage, MSG_SIZE, "header information is incomplete" );
 			errorlevel = 2;
 			return false;
 		}
@@ -3591,7 +3591,7 @@ INTERN bool jpg_setup_imginfo( void )
 		for ( bpos = 0; bpos < 64; bpos++ ) {
 			colldata[cmp][bpos] = (short int*) calloc ( cmpnfo[cmp].bc, sizeof( short ) );
 			if (colldata[cmp][bpos] == NULL) {
-				sprintf( errormessage, MEM_ERRMSG );
+				snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 				errorlevel = 2;
 				return false;
 			}
@@ -3606,7 +3606,7 @@ INTERN bool jpg_setup_imginfo( void )
 		if ( ( zdstdata[cmp] == NULL ) ||
 			( eobxhigh[cmp] == NULL ) || ( eobyhigh[cmp] == NULL ) ||
 			( zdstxlow[cmp] == NULL ) || ( zdstylow[cmp] == NULL ) ) {
-			sprintf( errormessage, MEM_ERRMSG );
+			snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 			errorlevel = 2;
 			return false;
 		}
@@ -3664,7 +3664,7 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 			
 			if ( hpos != len ) {
 				// if we get here, something went wrong
-				sprintf( errormessage, "size mismatch in dht marker" );
+				snprintf( errormessage, MSG_SIZE, "size mismatch in dht marker" );
 				errorlevel = 2;
 				return false;
 			}
@@ -3697,7 +3697,7 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 			
 			if ( hpos != len ) {
 				// if we get here, something went wrong
-				sprintf( errormessage, "size mismatch in dqt marker" );
+				snprintf( errormessage, MSG_SIZE, "size mismatch in dqt marker" );
 				errorlevel = 2;
 				return false;
 			}
@@ -3712,7 +3712,7 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 			// prepare next scan
 			cs_cmpc = segment[ hpos ];
 			if ( cs_cmpc > cmpc ) {
-				sprintf( errormessage, "%i components in scan, only %i are allowed",
+				snprintf( errormessage, MSG_SIZE, "%i components in scan, only %i are allowed",
 							cs_cmpc, cmpc );
 				errorlevel = 2;
 				return false;
@@ -3721,7 +3721,7 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 			for ( i = 0; i < cs_cmpc; i++ ) {
 				for ( cmp = 0; ( segment[ hpos ] != cmpnfo[ cmp ].jid ) && ( cmp < cmpc ); cmp++ );
 				if ( cmp == cmpc ) {
-					sprintf( errormessage, "component id mismatch in start-of-scan" );
+					snprintf( errormessage, MSG_SIZE, "component id mismatch in start-of-scan" );
 					errorlevel = 2;
 					return false;
 				}
@@ -3730,7 +3730,7 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 				cmpnfo[ cmp ].huffac = RBITS( segment[ hpos + 1 ], 4 );
 				if ( ( cmpnfo[ cmp ].huffdc < 0 ) || ( cmpnfo[ cmp ].huffdc >= 4 ) ||
 					 ( cmpnfo[ cmp ].huffac < 0 ) || ( cmpnfo[ cmp ].huffac >= 4 ) ) {
-					sprintf( errormessage, "huffman table number mismatch" );
+					snprintf( errormessage, MSG_SIZE, "huffman table number mismatch" );
 					errorlevel = 2;
 					return false;
 				}
@@ -3742,12 +3742,12 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 			cs_sal  = RBITS( segment[ hpos + 2 ], 4 );
 			// check for errors
 			if ( ( cs_from > cs_to ) || ( cs_from > 63 ) || ( cs_to > 63 ) ) {
-				sprintf( errormessage, "spectral selection parameter out of range" );
+				snprintf( errormessage, MSG_SIZE, "spectral selection parameter out of range" );
 				errorlevel = 2;
 				return false;
 			}
 			if ( ( cs_sah >= 12 ) || ( cs_sal >= 12 ) ) {
-				sprintf( errormessage, "successive approximation parameter out of range" );
+				snprintf( errormessage, MSG_SIZE, "successive approximation parameter out of range" );
 				errorlevel = 2;
 				return false;
 			}
@@ -3771,7 +3771,7 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 			// check data precision, only 8 bit is allowed
 			lval = segment[ hpos ];
 			if ( lval != 8 ) {
-				sprintf( errormessage, "%i bit data precision is not supported", lval );
+				snprintf( errormessage, MSG_SIZE, "%i bit data precision is not supported", lval );
 				errorlevel = 2;
 				return false;
 			}
@@ -3781,12 +3781,12 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 			imgwidth  = B_SHORT( segment[ hpos + 3 ], segment[ hpos + 4 ] );
 			cmpc      = segment[ hpos + 5 ];
 			if ( ( imgwidth == 0 ) || ( imgheight == 0 ) ) {
-				sprintf( errormessage, "resolution is %ix%i, possible malformed JPEG", imgwidth, imgheight );
+				snprintf( errormessage, MSG_SIZE, "resolution is %ix%i, possible malformed JPEG", imgwidth, imgheight );
 				errorlevel = 2;
 				return false;
 			}
 			if ( cmpc > 4 ) {
-				sprintf( errormessage, "image has %i components, max 4 are supported", cmpc );
+				snprintf( errormessage, MSG_SIZE, "image has %i components, max 4 are supported", cmpc );
 				errorlevel = 2;
 				return false;
 			}
@@ -3794,7 +3794,7 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 			// 6 bytes of frame header (already consumed below) plus 3 bytes per
 			// component. Without this a truncated SOF would over-read `segment`.
 			if ( len < 10 + ( 3 * (unsigned int) cmpc ) ) {
-				sprintf( errormessage, "size mismatch in sof marker" );
+				snprintf( errormessage, MSG_SIZE, "size mismatch in sof marker" );
 				errorlevel = 2;
 				return false;
 			}
@@ -3810,7 +3810,7 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 				// hand back a wild pointer that is dereferenced later (issues
 				// #23/#32, and the follow-on SEGVs #27/#35).
 				if ( segment[ hpos + 2 ] >= 4 ) {
-					sprintf( errormessage, "quantization table index %i out of range (0..3)",
+					snprintf( errormessage, MSG_SIZE, "quantization table index %i out of range (0..3)",
 						segment[ hpos + 2 ] );
 					errorlevel = 2;
 					return false;
@@ -3823,61 +3823,61 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 		
 		case 0xC3: // SOF3 segment
 			// coding process: lossless sequential
-			sprintf( errormessage, "sof3 marker found, image is coded lossless" );
+			snprintf( errormessage, MSG_SIZE, "sof3 marker found, image is coded lossless" );
 			errorlevel = 2;
 			return false;
 		
 		case 0xC5: // SOF5 segment
 			// coding process: differential sequential DCT
-			sprintf( errormessage, "sof5 marker found, image is coded diff. sequential" );
+			snprintf( errormessage, MSG_SIZE, "sof5 marker found, image is coded diff. sequential" );
 			errorlevel = 2;
 			return false;
 		
 		case 0xC6: // SOF6 segment
 			// coding process: differential progressive DCT
-			sprintf( errormessage, "sof6 marker found, image is coded diff. progressive" );
+			snprintf( errormessage, MSG_SIZE, "sof6 marker found, image is coded diff. progressive" );
 			errorlevel = 2;
 			return false;
 		
 		case 0xC7: // SOF7 segment
 			// coding process: differential lossless
-			sprintf( errormessage, "sof7 marker found, image is coded diff. lossless" );
+			snprintf( errormessage, MSG_SIZE, "sof7 marker found, image is coded diff. lossless" );
 			errorlevel = 2;
 			return false;
 			
 		case 0xC9: // SOF9 segment
 			// coding process: arithmetic extended sequential DCT
-			sprintf( errormessage, "sof9 marker found, image is coded arithm. sequential" );
+			snprintf( errormessage, MSG_SIZE, "sof9 marker found, image is coded arithm. sequential" );
 			errorlevel = 2;
 			return false;
 			
 		case 0xCA: // SOF10 segment
 			// coding process: arithmetic extended sequential DCT
-			sprintf( errormessage, "sof10 marker found, image is coded arithm. progressive" );
+			snprintf( errormessage, MSG_SIZE, "sof10 marker found, image is coded arithm. progressive" );
 			errorlevel = 2;
 			return false;
 			
 		case 0xCB: // SOF11 segment
 			// coding process: arithmetic extended sequential DCT
-			sprintf( errormessage, "sof11 marker found, image is coded arithm. lossless" );
+			snprintf( errormessage, MSG_SIZE, "sof11 marker found, image is coded arithm. lossless" );
 			errorlevel = 2;
 			return false;
 			
 		case 0xCD: // SOF13 segment
 			// coding process: arithmetic differntial sequential DCT
-			sprintf( errormessage, "sof13 marker found, image is coded arithm. diff. sequential" );
+			snprintf( errormessage, MSG_SIZE, "sof13 marker found, image is coded arithm. diff. sequential" );
 			errorlevel = 2;
 			return false;
 			
 		case 0xCE: // SOF14 segment
 			// coding process: arithmetic differential progressive DCT
-			sprintf( errormessage, "sof14 marker found, image is coded arithm. diff. progressive" );
+			snprintf( errormessage, MSG_SIZE, "sof14 marker found, image is coded arithm. diff. progressive" );
 			errorlevel = 2;
 			return false;
 		
 		case 0xCF: // SOF15 segment
 			// coding process: arithmetic differntial lossless
-			sprintf( errormessage, "sof15 marker found, image is coded arithm. diff. lossless" );
+			snprintf( errormessage, MSG_SIZE, "sof15 marker found, image is coded arithm. diff. lossless" );
 			errorlevel = 2;
 			return false;
 			
@@ -3910,25 +3910,25 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 		case 0xD6: // RST6 segment
 		case 0xD7: // RST7 segment
 			// return errormessage - RST is out of place here
-			sprintf( errormessage, "rst marker found out of place" );
+			snprintf( errormessage, MSG_SIZE, "rst marker found out of place" );
 			errorlevel = 2;
 			return false;
 		
 		case 0xD8: // SOI segment
 			// return errormessage - start-of-image is out of place here
-			sprintf( errormessage, "soi marker found out of place" );
+			snprintf( errormessage, MSG_SIZE, "soi marker found out of place" );
 			errorlevel = 2;
 			return false;
 		
 		case 0xD9: // EOI segment
 			// return errormessage - end-of-image is out of place here
-			sprintf( errormessage, "eoi marker found out of place" );
+			snprintf( errormessage, MSG_SIZE, "eoi marker found out of place" );
 			errorlevel = 2;
 			return false;
 			
 		default: // unknown marker segment
 			// return warning
-			sprintf( errormessage, "unknown marker found: FF %2X", type );
+			snprintf( errormessage, MSG_SIZE, "unknown marker found: FF %2X", type );
 			errorlevel = 1;
 			return true;
 	}
@@ -4906,7 +4906,7 @@ INTERN bool pjg_encode_dc( ArithmeticEncoder* enc, int cmp )
 	// allocate memory for absolute values storage
 	absv_store = (unsigned short*) calloc ( bc, sizeof( short ) );
 	if ( absv_store == NULL ) {
-		sprintf( errormessage, MEM_ERRMSG );
+		snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
 	}
@@ -5036,7 +5036,7 @@ INTERN bool pjg_encode_ac_high( ArithmeticEncoder* enc, int cmp )
 		if ( absv_store != NULL ) free( absv_store );
 		if ( sgn_store != NULL ) free( sgn_store );
 		if ( zdstls != NULL ) free( zdstls );
-		sprintf( errormessage, MEM_ERRMSG );
+		snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
 	}
@@ -5570,7 +5570,7 @@ INTERN bool pjg_decode_dc( ArithmeticDecoder* dec, int cmp )
 	// allocate memory for absolute values storage
 	absv_store = (unsigned short*) calloc ( bc, sizeof( short ) );
 	if ( absv_store == NULL ) {
-		sprintf( errormessage, MEM_ERRMSG );
+		snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
 	}
@@ -5700,7 +5700,7 @@ INTERN bool pjg_decode_ac_high( ArithmeticDecoder* dec, int cmp )
 		if ( absv_store != NULL ) free( absv_store );
 		if ( sgn_store != NULL ) free( sgn_store );
 		if ( zdstls != NULL ) free( zdstls );
-		sprintf( errormessage, MEM_ERRMSG );
+		snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
 	}
@@ -6014,7 +6014,7 @@ INTERN bool pjg_decode_generic( ArithmeticDecoder* dec, unsigned char** data, in
 
 	if ( exhausted ) {
 		delete bwrt;
-		sprintf( errormessage, "truncated arithmetic stream in header" );
+		snprintf( errormessage, MSG_SIZE, "truncated arithmetic stream in header" );
 		errorlevel = 2;
 		return false;
 	}
@@ -6022,7 +6022,7 @@ INTERN bool pjg_decode_generic( ArithmeticDecoder* dec, unsigned char** data, in
 	// check for out of memory
 	if ( bwrt->error() ) {
 		delete bwrt;
-		sprintf( errormessage, MEM_ERRMSG );
+		snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 		errorlevel = 2;
 		return false;
 	}
@@ -6110,7 +6110,7 @@ INTERN void pjg_get_zerosort_scan( unsigned char* sv, int cmp )
 	----------------------------------------------- */
 INTERN bool pjg_header_error( void )
 {
-	sprintf( errormessage, "malformed marker segment in header" );
+	snprintf( errormessage, MSG_SIZE, "malformed marker segment in header" );
 	errorlevel = 2;
 	return false;
 }
@@ -6946,7 +6946,7 @@ INTERN bool dump_coll( void )
 		// open file for output
 		fp = fopen( fn, "wb" );
 		if ( fp == NULL ){
-			sprintf( errormessage, FWR_ERRMSG, fn);
+			snprintf( errormessage, MSG_SIZE, FWR_ERRMSG, fn);
 			errorlevel = 2;
 			return false;
 		}
@@ -7070,7 +7070,7 @@ INTERN bool dump_file( const char* base, const char* ext, void* data, int bpv, i
 	// open file for output
 	fp = fopen( fn, "wb" );	
 	if ( fp == NULL ) {
-		sprintf( errormessage, FWR_ERRMSG, fn);
+		snprintf( errormessage, MSG_SIZE, FWR_ERRMSG, fn);
 		errorlevel = 2;
 		return false;
 	}
@@ -7109,7 +7109,7 @@ INTERN bool dump_errfile( void )
 	// open file for output
 	fp = fopen( fn, "w" );
 	if ( fp == NULL ){
-		sprintf( errormessage, FWR_ERRMSG, fn);
+		snprintf( errormessage, MSG_SIZE, FWR_ERRMSG, fn);
 		errorlevel = 2;
 		return false;
 	}
@@ -7155,7 +7155,7 @@ INTERN bool dump_info( void )
 	// open file for output
 	fp = fopen( fn, "w" );
 	if ( fp == NULL ){
-		sprintf( errormessage, FWR_ERRMSG, fn);
+		snprintf( errormessage, MSG_SIZE, FWR_ERRMSG, fn);
 		errorlevel = 2;
 		return false;
 	}
@@ -7245,7 +7245,7 @@ INTERN bool dump_dist( void )
 	fp = fopen( fn, "wb" );
 	free( fn );
 	if ( fp == NULL ){
-		sprintf( errormessage, FWR_ERRMSG, fn);
+		snprintf( errormessage, MSG_SIZE, FWR_ERRMSG, fn);
 		errorlevel = 2;
 		return false;
 	}
@@ -7303,7 +7303,7 @@ INTERN bool dump_pgm( void )
 		// open file for output
 		fp = fopen( fn, "wb" );		
 		if ( fp == NULL ){
-			sprintf( errormessage, FWR_ERRMSG, fn );
+			snprintf( errormessage, MSG_SIZE, FWR_ERRMSG, fn );
 			errorlevel = 2;
 			return false;
 		}
@@ -7313,7 +7313,7 @@ INTERN bool dump_pgm( void )
 		imgdata = (unsigned char*) calloc ( cmpnfo[cmp].bc * 64, sizeof( char ) );
 		if ( imgdata == NULL ) {
 			fclose( fp );
-			sprintf( errormessage, MEM_ERRMSG );
+			snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 			errorlevel = 2;
 			return false;
 		}
