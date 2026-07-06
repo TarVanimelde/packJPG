@@ -10,8 +10,8 @@
 
 template <std::uint8_t bit>
 void ArithmeticBitWriter::write_bit() {
-    // add bit at last position
-    curr_byte_ = (curr_byte_ << 1) | bit;
+	// add bit at last position
+	curr_byte_ = (curr_byte_ << 1) | bit;
 	// increment bit position
 	curr_bit_++;
 
@@ -71,42 +71,42 @@ std::vector<std::uint8_t> ArithmeticBitWriter::get_data() const {
 }
 
 ArithmeticDecoder::ArithmeticDecoder(Reader& reader) : reader_(reader) {
-    // code buffer has to be filled before starting decoding
+	// code buffer has to be filled before starting decoding
 	for (std::uint32_t i = 0; i < CODER_USE_BITS; i++ ) {
 		ccode = ( ccode << 1 ) | read_bit();
-    }
+	}
 }
 
 ArithmeticEncoder::ArithmeticEncoder(Writer& writer) : writer_(writer) {}
 
 ArithmeticEncoder::~ArithmeticEncoder() {
-    if (!finalized) {
-        this->finalize();
-    }
+	if (!finalized) {
+		this->finalize();
+	}
 }
 
 void ArithmeticEncoder::finalize() {
-    if (finalized) {
-        return;
-    }
+	if (finalized) {
+		return;
+	}
     
-    // due to clow < CODER_LIMIT050, and chigh >= CODER_LIMIT050
-    // there are only two possible cases
-    if (clow < CODER_LIMIT025) {
-        bitwriter_->write_bit<0>();
-        bitwriter_->write_bit<1>();
-        bitwriter_->write_n_one_bits(nrbits);
-        nrbits = 0;
-    } else {
-         // case b.), clow >= CODER_LIMIT025
-        bitwriter_->write_bit<1>();
-    }
-     // done, zeroes are auto-read by the decoder
+	// due to clow < CODER_LIMIT050, and chigh >= CODER_LIMIT050
+	// there are only two possible cases
+	if (clow < CODER_LIMIT025) {
+		bitwriter_->write_bit<0>();
+		bitwriter_->write_bit<1>();
+		bitwriter_->write_n_one_bits(nrbits);
+		nrbits = 0;
+	} else {
+		 // case b.), clow >= CODER_LIMIT025
+		bitwriter_->write_bit<1>();
+	}
+	 // done, zeroes are auto-read by the decoder
 
-    bitwriter_->pad(); // Pad code with zeroes.
-    writer_.write(bitwriter_->get_data());
+	bitwriter_->pad(); // Pad code with zeroes.
+	writer_.write(bitwriter_->get_data());
     
-    finalized = true;
+	finalized = true;
 }
 
 /* -----------------------------------------------
@@ -131,8 +131,8 @@ void ArithmeticEncoder::encode( symbol* s )
 			// write 0 bit
 			bitwriter_->write_bit<0>();
 			// shift out remaing e3 bits
-            bitwriter_->write_n_one_bits(nrbits);
-            nrbits = 0;
+			bitwriter_->write_n_one_bits(nrbits);
+			nrbits = 0;
 		}
 		else { // if the first wasn't the case, it's clow >= CODER_LIMIT050
 			// write 1 bit
@@ -141,7 +141,7 @@ void ArithmeticEncoder::encode( symbol* s )
 			chigh_local &= CODER_LIMIT050 - 1;
 			// shift out remaing e3 bits
 			bitwriter_->write_n_zero_bits(nrbits);
-            nrbits = 0;
+			nrbits = 0;
 		}
 		clow_local <<= 1;
 		chigh_local <<= 1;

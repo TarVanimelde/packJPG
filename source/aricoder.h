@@ -176,19 +176,19 @@ private:
 class ArithmeticEncoder
 {
 	public:
-    ArithmeticEncoder(Writer& writer);
+	ArithmeticEncoder(Writer& writer);
 	~ArithmeticEncoder();
 	void encode( symbol* s );
 
-    void finalize();
+	void finalize();
 	
 	private:
 	
 	// i/o variables
     
-    bool finalized = false;
-    Writer& writer_;
-    std::unique_ptr<ArithmeticBitWriter> bitwriter_ = std::make_unique<ArithmeticBitWriter>();
+	bool finalized = false;
+	Writer& writer_;
+	std::unique_ptr<ArithmeticBitWriter> bitwriter_ = std::make_unique<ArithmeticBitWriter>();
 	
 	// arithmetic coding variables
 	unsigned int ccode = 0;
@@ -200,7 +200,7 @@ class ArithmeticEncoder
 
 class ArithmeticDecoder {
 	public:
-    ArithmeticDecoder(Reader& reader);
+	ArithmeticDecoder(Reader& reader);
 	~ArithmeticDecoder() {}
 	unsigned int decode_count( symbol* s );
 	void decode( symbol* s );
@@ -217,7 +217,7 @@ class ArithmeticDecoder {
 	unsigned char read_bit();
 
 	// i/o variables
-    Reader& reader_;
+	Reader& reader_;
 	unsigned char bbyte = 0;
 	unsigned char cbit = 0;
 	unsigned int pad_bytes_ = 0; // zero bytes fabricated past end of input

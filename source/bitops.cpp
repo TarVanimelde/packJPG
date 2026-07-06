@@ -48,11 +48,11 @@ unsigned int BitReader::read( int nbits ) {
 	while ( nbits >= cbit ) {
 		nbits -= cbit;
 		retval |= ( RBITS( data[cbyte], cbit ) << nbits );		
-        update_curr_byte();
-        if (eof()) {
-            peof_ = nbits;
-            return retval;
-        }
+		update_curr_byte();
+		if (eof()) {
+			peof_ = nbits;
+			return retval;
+		}
 	}
 	
 	if ( nbits > 0 ) {		
@@ -76,16 +76,16 @@ unsigned char BitReader::read_bit() {
 	// read one bit
 	unsigned char bit = BITN( data[cbyte], --cbit );
 	if ( cbit == 0 ) {
-        update_curr_byte();
+		update_curr_byte();
 	} 
 	
 	return bit;
 }
 
 void BitReader::update_curr_byte() {
-    cbyte++;
-    eof_ = cbyte == lbyte;
-    cbit = 8;
+	cbyte++;
+	eof_ = cbyte == lbyte;
+	cbit = 8;
 }
 
 /* -----------------------------------------------
@@ -94,12 +94,12 @@ void BitReader::update_curr_byte() {
 
 unsigned char BitReader::unpad( unsigned char fillbit ) {
 	if ( ( cbit == 8 ) || eof()) {
-        return fillbit;
-    } else {
+		return fillbit;
+	} else {
 		fillbit = read( 1 );
 		while ( cbit != 8 ) {
-            read( 1 );
-        }
+			read( 1 );
+		}
 	}
 	
 	return fillbit;
@@ -180,11 +180,11 @@ BitWriter::BitWriter(std::uint8_t padbit) : padbit_(padbit) {}
 BitWriter::~BitWriter() {}
 
 std::uint32_t rbits32(std::uint32_t val, std::size_t n) {
-    return val & (0xFFFFFFFF >> (32 - n));
+	return val & (0xFFFFFFFF >> (32 - n));
 }
 
 std::uint32_t mbits32(std::uint32_t val, std::size_t l, std::size_t r) {
-    return rbits32(val, l) >> r;
+	return rbits32(val, l) >> r;
 }
 
 void BitWriter::write_u16(std::uint16_t val, std::size_t num_bits) {
@@ -226,17 +226,17 @@ std::vector<std::uint8_t> BitWriter::get_bytes() {
 }
 
 unsigned char* BitWriter::get_c_bytes() {
-    pad(); // Pad the last bits of the current byte before returning the written bytes.
-    // NOTE: allocate with malloc (not new[]). Callers assign the result to
-    // buffers (e.g. huffdata in packjpg.cpp) that are released with free(), so
-    // using new[] here is an alloc/dealloc mismatch (undefined behaviour). This
-    // mirrors the sibling get_c_data() below, which also uses malloc.
-    unsigned char* c_bytes = (unsigned char*) std::malloc(bytes_.size());
-    if (c_bytes == nullptr) {
-        return nullptr;
-    }
-    std::copy(std::begin(bytes_), std::end(bytes_), c_bytes);
-    return c_bytes;
+	pad(); // Pad the last bits of the current byte before returning the written bytes.
+	// NOTE: allocate with malloc (not new[]). Callers assign the result to
+	// buffers (e.g. huffdata in packjpg.cpp) that are released with free(), so
+	// using new[] here is an alloc/dealloc mismatch (undefined behaviour). This
+	// mirrors the sibling get_c_data() below, which also uses malloc.
+	unsigned char* c_bytes = (unsigned char*) std::malloc(bytes_.size());
+	if (c_bytes == nullptr) {
+		return nullptr;
+	}
+	std::copy(std::begin(bytes_), std::end(bytes_), c_bytes);
+	return c_bytes;
 }
 
 std::size_t BitWriter::num_bytes_written() const {
@@ -244,14 +244,14 @@ std::size_t BitWriter::num_bytes_written() const {
 }
 
 unsigned char* Reader::get_c_data() {
-    const auto data = this->get_data();
-    auto c_data_copy = (unsigned char*)std::malloc(data.size() * sizeof data[0]);
-    if (c_data_copy == nullptr) {
-        return nullptr;
-    }
+	const auto data = this->get_data();
+	auto c_data_copy = (unsigned char*)std::malloc(data.size() * sizeof data[0]);
+	if (c_data_copy == nullptr) {
+		return nullptr;
+	}
 
-    std::copy(std::begin(data), std::end(data), c_data_copy);
-    return c_data_copy;
+	std::copy(std::begin(data), std::end(data), c_data_copy);
+	return c_data_copy;
 }
 
 MemoryReader::MemoryReader(const std::vector<std::uint8_t>& bytes) :
@@ -260,8 +260,8 @@ MemoryReader::MemoryReader(const std::vector<std::uint8_t>& bytes) :
 }
 
 MemoryReader::MemoryReader(const std::uint8_t* bytes, std::size_t size) :
-    data_(bytes, bytes + size),
-    cbyte_(std::begin(data_)) {
+	data_(bytes, bytes + size),
+	cbyte_(std::begin(data_)) {
 }
 
 std::size_t MemoryReader::read(std::uint8_t* to, std::size_t num_to_read) {
@@ -346,18 +346,18 @@ bool MemoryReader::end_of_reader() {
 }
 
 unsigned char* Writer::get_c_data() {
-    try {
-        const auto data = this->get_data();
-        auto c_data_copy = (unsigned char*)std::malloc(data.size() * sizeof data[0]);
-        if (c_data_copy == nullptr) {
-            return nullptr;
-        }
+	try {
+		const auto data = this->get_data();
+		auto c_data_copy = (unsigned char*)std::malloc(data.size() * sizeof data[0]);
+		if (c_data_copy == nullptr) {
+			return nullptr;
+		}
 
-        std::copy(std::begin(data), std::end(data), c_data_copy);
-        return c_data_copy;
-    } catch (const std::exception&) {
-        return nullptr;
-    }
+		std::copy(std::begin(data), std::end(data), c_data_copy);
+		return c_data_copy;
+	} catch (const std::exception&) {
+		return nullptr;
+	}
 }
 
 MemoryWriter::MemoryWriter() {}

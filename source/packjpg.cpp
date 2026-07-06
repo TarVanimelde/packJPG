@@ -933,8 +933,8 @@ EXPORT bool pjglib_convert_stream2mem( unsigned char** out_file, unsigned int* o
 	}
 	
 	// close iostreams
-    str_in.reset(nullptr);
-    str_out.reset(nullptr);
+	str_in.reset(nullptr);
+	str_out.reset(nullptr);
 	
 	end = clock();
 	
@@ -1017,20 +1017,20 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
 	pjgfilesize = 0;
 	
 
-    switch (in_type) {
-        case 0:
-            try {
-                str_in = std::make_unique<FileReader>((char*)in_src);
-            } catch (const std::runtime_error&) {
-                snprintf( errormessage, MSG_SIZE, "error opening input file %s", (char*)in_src);
-		        errorlevel = 2;
-		        return;
-            }
-            break;
-        case 1:
-            str_in = std::make_unique<MemoryReader>((unsigned char*)in_src, in_size);
-            break;
-        case 2:
+	switch (in_type) {
+		case 0:
+			try {
+				str_in = std::make_unique<FileReader>((char*)in_src);
+			} catch (const std::runtime_error&) {
+				snprintf( errormessage, MSG_SIZE, "error opening input file %s", (char*)in_src);
+				errorlevel = 2;
+				return;
+			}
+			break;
+		case 1:
+			str_in = std::make_unique<MemoryReader>((unsigned char*)in_src, in_size);
+			break;
+		case 2:
 			try {
 				str_in = std::make_unique<StreamReader>();
 			} catch (const std::runtime_error& e) {
@@ -1038,27 +1038,27 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
 				errorlevel = 2;
 				return;
 			}
-            break;
-        default:
-            snprintf( errormessage, MSG_SIZE, "Invalid input type: %i", in_type);
-		    errorlevel = 2;
-		    return;
-    }
+			break;
+		default:
+			snprintf( errormessage, MSG_SIZE, "Invalid input type: %i", in_type);
+			errorlevel = 2;
+			return;
+	}
 
-    switch (out_type) {
-        case 0:
-            try {
-                str_out = std::make_unique<FileWriter>((char*)out_dest);
-            } catch (const std::runtime_error&) {
-                snprintf( errormessage, MSG_SIZE, "error opening output file %s", (char*)out_dest);
-		        errorlevel = 2;
-		        return;
-            }
-            break;
-        case 1:
-            str_out = std::make_unique<MemoryWriter>();
-            break;
-        case 2:
+	switch (out_type) {
+		case 0:
+			try {
+				str_out = std::make_unique<FileWriter>((char*)out_dest);
+			} catch (const std::runtime_error&) {
+				snprintf( errormessage, MSG_SIZE, "error opening output file %s", (char*)out_dest);
+				errorlevel = 2;
+				return;
+			}
+			break;
+		case 1:
+			str_out = std::make_unique<MemoryWriter>();
+			break;
+		case 2:
 			try {
 				str_out = std::make_unique<StreamWriter>();
 			} catch (const std::runtime_error& e) {
@@ -1066,12 +1066,12 @@ EXPORT void pjglib_init_streams( void* in_src, int in_type, int in_size, void* o
 				errorlevel = 2;
 				return;
 			}
-            break;
-        default:
-            snprintf( errormessage, MSG_SIZE, "Invalid output type: %i", out_type);
-		    errorlevel = 2;
-		    return;
-    }
+			break;
+		default:
+			snprintf( errormessage, MSG_SIZE, "Invalid output type: %i", out_type);
+			errorlevel = 2;
+			return;
+	}
 	
 	// free memory from filenames if needed
 	if (jpgfilename != nullptr) {
@@ -1274,7 +1274,7 @@ INTERN void initialize_options( int argc, char** argv )
 		else if ( strcmp((*argv), "-pgm") == 0 ) {
 			action = A_PGM_DUMP;
 		}
-	   	else if ( ( strcmp((*argv), "-comp") == 0) ) {
+		else if ( ( strcmp((*argv), "-comp") == 0) ) {
 			action = A_COMPRESS;
 		}
 		#endif
@@ -1389,9 +1389,9 @@ INTERN void process_ui( void )
 	process_file();
 	
 	// close iostreams
-    str_in.reset(nullptr);
-    str_out.reset(nullptr);
-    str_str.reset(nullptr);
+	str_in.reset(nullptr);
+	str_out.reset(nullptr);
+	str_str.reset(nullptr);
 	// delete if broken or if output not needed
 	if ( ( !pipe_on ) && ( ( errorlevel >= err_tol ) || ( action != A_COMPRESS ) ) ) {
 		if ( filetype == F_JPG ) {
@@ -1887,8 +1887,8 @@ INTERN bool check_file( void )
 			}
 		} catch (const std::runtime_error& e) {
 			snprintf( errormessage, MSG_SIZE, "%s", e.what() );
-            errorlevel = 2;
-            return false;
+			errorlevel = 2;
+			return false;
 		}
 		// JPEG specific settings - restore original settings
 		if ( orig_set[ 0 ] == 0 )
@@ -1921,11 +1921,11 @@ INTERN bool check_file( void )
 			pjgfilename = create_filename( "STDIN", NULL );
 		}
 		// open output stream, check for errors
-        if (pipe_on) {
-            str_out = std::make_unique<StreamWriter>();
-        } else {
-            str_out = std::make_unique<FileWriter>(std::string(jpgfilename));
-        }
+		if (pipe_on) {
+			str_out = std::make_unique<StreamWriter>();
+		} else {
+			str_out = std::make_unique<FileWriter>(std::string(jpgfilename));
+		}
 		// PJG specific settings - auto unless specified otherwise
 		auto_set = true;
 	}
@@ -1957,11 +1957,11 @@ INTERN bool swap_streams( void )
 	str_str->rewind();
 	
 	// replace input stream by output stream / switch mode for reading / read first bytes
-    str_in = std::make_unique<MemoryReader>(str_out->get_data());
+	str_in = std::make_unique<MemoryReader>(str_out->get_data());
 	str_in->read( dmp, 2 );
 	
 	// open new stream for output / check for errors
-    str_out = std::make_unique<MemoryWriter>();
+	str_out = std::make_unique<MemoryWriter>();
 	
 	return true;
 }
@@ -1975,22 +1975,22 @@ INTERN bool swap_streams( void )
 #if !defined(BUILD_LIB)
 INTERN bool compare_output( void )
 {
-    if (str_out->error()) {
-        snprintf( errormessage, MSG_SIZE, "error in comparison stream");
-        errorlevel = 2;
-        return false;
-    } else if (str_in->error()) {
-        snprintf( errormessage, MSG_SIZE, "error in output stream");
-        errorlevel = 2;
-        return false;
-    } else if (str_str->error()) {
-        snprintf( errormessage, MSG_SIZE, "error in input stream");
-        errorlevel = 2;
-        return false;
-    }
+	if (str_out->error()) {
+		snprintf( errormessage, MSG_SIZE, "error in comparison stream");
+		errorlevel = 2;
+		return false;
+	} else if (str_in->error()) {
+		snprintf( errormessage, MSG_SIZE, "error in output stream");
+		errorlevel = 2;
+		return false;
+	} else if (str_str->error()) {
+		snprintf( errormessage, MSG_SIZE, "error in input stream");
+		errorlevel = 2;
+		return false;
+	}
     
 	const auto verif_data = str_out->get_data();
-    const auto orig_data = str_str->get_data();
+	const auto orig_data = str_str->get_data();
     
 	if (verif_data.size() != orig_data.size()) {
 		snprintf( errormessage, MSG_SIZE, "file sizes do not match" );
@@ -1998,12 +1998,12 @@ INTERN bool compare_output( void )
 		return false;
 	}
 	const auto result = std::mismatch(std::begin(orig_data),
-	                                  std::end(orig_data),
-	                                  std::begin(verif_data),
-	                                  std::end(verif_data));
+									  std::end(orig_data),
+									  std::begin(verif_data),
+									  std::end(verif_data));
 	if (result.first != std::end(orig_data) || result.second != std::end(verif_data)) {
 		const auto first_diff = std::distance(std::begin(orig_data), result.first);
-        snprintf( errormessage, MSG_SIZE, "difference found at 0x%ld", first_diff );
+		snprintf( errormessage, MSG_SIZE, "difference found at 0x%ld", first_diff );
 		errorlevel = 2;
 		return false;
 	}
@@ -4492,7 +4492,7 @@ INTERN int jpg_encode_crbits( BitWriter* huffw, std::vector<std::uint8_t>& storw
 {	
 	for (const std::uint8_t bit : storw) {
 		huffw->write_bit(bit);
-    }
+	}
 	storw.clear();
 	return 0;
 }
