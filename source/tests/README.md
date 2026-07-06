@@ -207,6 +207,20 @@ boundary instead.
     and the `e.what()` sites use an explicit `"%s"`. `make test-asan` feeds the
     CLI an over-long filename as the regression guard.
 
+11. **Heap-buffer-overflow read in `jpg_build_huffcodes` / `jpg_parse_jfif`
+    (`packjpg.cpp`) — FIXED (upstream issues #26, #33).** DHT parsing called
+    `jpg_build_huffcodes` with `clen` = the 16 code-length counts and `cval` =
+    the code-value bytes, then computed how far to advance (`skip = 16 + sum of
+    counts`) *after* the call. A malformed DHT whose counts sum past the end of
+    the marker segment made `jpg_build_huffcodes` read the value bytes off the
+    end of the `hdrdata` allocation (ASan: heap-buffer-overflow READ). The
+    sibling DQT/DRI parsers and the outer `len` (from the marker length field)
+    were unbounded too. **Fix:** clamp `len` to the bytes actually present in
+    `hdrdata` at the top of `jpg_parse_jfif`; in the DHT loop compute the table
+    span first and bail if `hpos + 16 + sum > len` before building; and bound the
+    DQT (64 / 128 value bytes) and DRI (2 interval bytes) reads against `len`.
+    Regression fixture: `fixtures/invalid/jpg_dht_overflow.jpg`.
+
 ## Notes / limitations
 
 * The shipped `docs/sample_images.zip` contains only PNG coefficient dumps, not

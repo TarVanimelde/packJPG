@@ -3638,8 +3638,17 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 	int skip;
 	int cmp;
 	int i;
-	
-	
+
+	// `len` comes from a (possibly malformed) marker length field and may claim
+	// more bytes than hdrdata actually holds. Every caller points `segment` into
+	// hdrdata, so clamp `len` to the bytes really present -- otherwise the parsers
+	// below (e.g. jpg_build_huffcodes walking DHT counts) can read past the
+	// header allocation.
+	if ( segment >= hdrdata && segment <= hdrdata + hdrs ) {
+		unsigned int avail = ( unsigned int )( ( hdrdata + hdrs ) - segment );
+		if ( len > avail ) len = avail;
+	}
+
 	switch ( type )
 	{
 		case 0xC4: // DHT segment
@@ -3651,14 +3660,21 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 					break;
 					
 				hpos++;
+				// the 16 code-length counts plus the code values they sum to must
+				// lie inside the segment; otherwise jpg_build_huffcodes would read
+				// past the header buffer. Compute the span first and bail (-> the
+				// "size mismatch" check below) if it does not fit.
+				if ( hpos + 16 > len )
+					break;
+				skip = 16;
+				for ( i = 0; i < 16; i++ )
+					skip += ( int ) segment[ hpos + i ];
+				if ( hpos + ( unsigned int ) skip > len )
+					break;
 				// build huffman codes & trees
 				jpg_build_huffcodes( &(segment[ hpos + 0 ]), &(segment[ hpos + 16 ]),
 					&(hcodes[ lval ][ rval ]), &(htrees[ lval ][ rval ]) );
 				htset[ lval ][ rval ] = 1;
-				
-				skip = 16;
-				for ( i = 0; i < 16; i++ )		
-					skip += ( int ) segment[ hpos + i ];				
 				hpos += skip;
 			}
 			
@@ -3679,6 +3695,7 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 				if ( (rval < 0) || (rval >= 4) ) break;
 				hpos++;				
 				if ( lval == 0 ) { // 8 bit precision
+					if ( hpos + 64 > len ) break; // 64 value bytes must be present
 					for ( i = 0; i < 64; i++ ) {
 						qtables[ rval ][ i ] = ( unsigned short ) segment[ hpos + i ];
 						if ( qtables[ rval ][ i ] == 0 ) break;
@@ -3686,6 +3703,7 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 					hpos += 64;
 				}
 				else { // 16 bit precision
+					if ( hpos + 128 > len ) break; // 128 value bytes must be present
 					for ( i = 0; i < 64; i++ ) {
 						qtables[ rval ][ i ] =
 							B_SHORT( segment[ hpos + (2*i) ], segment[ hpos + (2*i) + 1 ] );
@@ -3705,7 +3723,8 @@ INTERN bool jpg_parse_jfif( unsigned char type, unsigned int len, unsigned char*
 			
 		case 0xDD: // DRI segment
 			// define restart interval
-			rsti = B_SHORT( segment[ hpos ], segment[ hpos + 1 ] );			
+			if ( hpos + 2 > len ) return false; // need the 2 interval bytes
+			rsti = B_SHORT( segment[ hpos ], segment[ hpos + 1 ] );
 			return true;
 			
 		case 0xDA: // SOS segment

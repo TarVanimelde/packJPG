@@ -74,6 +74,11 @@ const char* kInvalid[] = {
     // (`huffr`, 32 bytes) -> LeakSanitizer report (upstream issue #34). Kept as a
     // rejection test here; `make test-asan` (detect_leaks=1) is the leak guard.
     "jpg_decode_huffr_leak.jpg",
+    // Fuzzed JPEG with a DHT whose 16 code-length counts sum past the end of the
+    // marker segment: jpg_build_huffcodes walked the code-value bytes off the end
+    // of the hdrdata buffer -> heap-buffer-overflow READ under ASan (upstream
+    // issues #26/#33). `make test-asan` is the guard.
+    "jpg_dht_overflow.jpg",
 };
 
 using Bytes = std::vector<std::uint8_t>;
