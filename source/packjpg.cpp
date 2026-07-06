@@ -2293,6 +2293,7 @@ INTERN bool read_jpeg( void )
 	if ( ( hdrs == 0 ) || ( hufs == 0 ) ) {
 		sprintf( errormessage, "unexpected end of data encountered" );
 		errorlevel = 2;
+		free( segment ); // do not leak the segment buffer on this error path
 		return false;
 	}
 	
@@ -2468,6 +2469,7 @@ INTERN bool decode_jpeg( void )
 			len = 2 + B_SHORT( hdrdata[ hpos + 2 ], hdrdata[ hpos + 3 ] );
 			if ( ( type == 0xC4 ) || ( type == 0xDA ) || ( type == 0xDD ) ) {
 				if ( !jpg_parse_jfif( type, len, &( hdrdata[ hpos ] ) ) ) {
+					delete huffr; // avoid leaking the BitReader on this error path
 					return false;
 				}
 			}
@@ -3447,21 +3449,24 @@ INTERN bool unpack_pjg( void )
 	}
 	
 	
-	// init arithmetic compression
-	auto decoder = new ArithmeticDecoder(*str_in);
-	
+	// init arithmetic compression. Held in a unique_ptr so the decoder is
+	// released on every early "return false" below (there are many) instead of
+	// only on the success path -- the manual delete used to leak it on any
+	// malformed-input error return.
+	auto decoder = std::make_unique<ArithmeticDecoder>(*str_in);
+
 	// decode JPG header
-	if ( !pjg_decode_generic( decoder, &hdrdata, &hdrs ) ) return false;
+	if ( !pjg_decode_generic( decoder.get(), &hdrdata, &hdrs ) ) return false;
 	// retrieve padbit from stream
-	if (!pjg_decode_bit(decoder, &cb)) {
+	if (!pjg_decode_bit(decoder.get(), &cb)) {
 		return false;
 	}
 	padbit = cb;
 	// decode one bit that signals false /correct use of RST markers
-	if ( !pjg_decode_bit( decoder, &cb ) ) return false;
+	if ( !pjg_decode_bit( decoder.get(), &cb ) ) return false;
 	// decode # of false set RST markers per scan only if available
 	if ( cb == 1 )
-		if ( !pjg_decode_generic( decoder, &rst_err, NULL ) ) return false;
+		if ( !pjg_decode_generic( decoder.get(), &rst_err, NULL ) ) return false;
 	
 	// undo header optimizations
 	if ( !pjg_unoptimize_header() )	return false;	
@@ -3474,30 +3479,29 @@ INTERN bool unpack_pjg( void )
 	// decode actual components data
 	for ( cmp = 0; cmp < cmpc; cmp++ ) {		
 		// decode frequency scan ('zero-sort-scan')
-		if ( !pjg_decode_zstscan( decoder, cmp ) ) return false;		
+		if ( !pjg_decode_zstscan( decoder.get(), cmp ) ) return false;		
 		// decode zero-distribution-lists for higher (7x7) ACs
-		if ( !pjg_decode_zdst_high( decoder, cmp ) ) return false;
+		if ( !pjg_decode_zdst_high( decoder.get(), cmp ) ) return false;
 		// decode coefficients for higher (7x7) ACs
-		if ( !pjg_decode_ac_high( decoder, cmp ) ) return false;
+		if ( !pjg_decode_ac_high( decoder.get(), cmp ) ) return false;
 		// decode zero-distribution-lists for lower ACs
-		if ( !pjg_decode_zdst_low( decoder, cmp ) ) return false;
+		if ( !pjg_decode_zdst_low( decoder.get(), cmp ) ) return false;
 		// decode coefficients for first row / collumn ACs
-		if ( !pjg_decode_ac_low( decoder, cmp ) ) return false;	
+		if ( !pjg_decode_ac_low( decoder.get(), cmp ) ) return false;	
 		// decode coefficients for DC
-		if ( !pjg_decode_dc( decoder, cmp ) ) return false;	
+		if ( !pjg_decode_dc( decoder.get(), cmp ) ) return false;	
 	}
 	
 	// retrieve checkbit for garbage (0 if no garbage, 1 if garbage has to be coded)
-	if ( !pjg_decode_bit( decoder, &cb ) ) return false;
+	if ( !pjg_decode_bit( decoder.get(), &cb ) ) return false;
 	
 	// decode garbage data only if available
 	if ( cb == 0 ) grbs = 0;
-	else if ( !pjg_decode_generic( decoder, &grbgdata, &grbs ) ) return false;
+	else if ( !pjg_decode_generic( decoder.get(), &grbgdata, &grbs ) ) return false;
 	
-	// finalize arithmetic compression
-	delete( decoder );
-	
-	
+	// arithmetic decoder is released automatically by its unique_ptr
+
+
 	// get filesize
 	pjgfilesize = str_in->get_size();
 	

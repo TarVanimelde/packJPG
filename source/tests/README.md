@@ -181,6 +181,20 @@ boundary instead.
    grayscale JPEG with its component `Tq` byte set to 4); `make test-asan` now
    also feeds the malformed `.jpg` fixtures to ASan.
 
+9. **Memory leaks on error-exit paths (`read_jpeg`, `decode_jpeg`, `unpack_pjg`)
+   — FIXED (upstream issues #29, #34).** LeakSanitizer flagged buffers that were
+   only freed on the success path:
+   * `read_jpeg` leaked its `segment` buffer (calloc, 1 KB) on the
+     "unexpected end of data" return (issue #29);
+   * `decode_jpeg` leaked its `BitReader` `huffr` (32 bytes, `new`) on the
+     `jpg_parse_jfif` failure return (issue #34);
+   * `unpack_pjg` leaked its `ArithmeticDecoder` on all ~15 early error returns.
+   **Fix:** free `segment` on the error path, `delete huffr` on the error path,
+   and hold the decoder in a `std::unique_ptr` so every early return releases it.
+   `make test-asan` now runs with `detect_leaks=1` and, on the pre-fix code,
+   flags these via `truncated.jpg`, `jpg_decode_huffr_leak.jpg`, and the `.pjg`
+   fixtures respectively. (LeakSanitizer is Linux-only.)
+
 ## Notes / limitations
 
 * The shipped `docs/sample_images.zip` contains only PNG coefficient dumps, not

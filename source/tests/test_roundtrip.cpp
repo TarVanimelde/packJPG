@@ -69,6 +69,11 @@ const char* kInvalid[] = {
     // pointer dereferenced in jpg_setup_imginfo -> global-buffer-overflow under
     // ASan (upstream issues #23/#32, follow-on SEGVs #27/#35).
     "jpg_qtable_index_oob.jpg",
+    // Fuzzed JPEG that passes read_jpeg but fails jpg_parse_jfif inside
+    // decode_jpeg: the early "return false" there used to leak the BitReader
+    // (`huffr`, 32 bytes) -> LeakSanitizer report (upstream issue #34). Kept as a
+    // rejection test here; `make test-asan` (detect_leaks=1) is the leak guard.
+    "jpg_decode_huffr_leak.jpg",
 };
 
 using Bytes = std::vector<std::uint8_t>;
