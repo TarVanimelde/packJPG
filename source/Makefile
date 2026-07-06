@@ -34,7 +34,7 @@ $(TARGET): $(OBJ) $(RES)
 	$(CPP) -o $@ $^ -s $(LDFLAGS)
 	$(UPX)
 
-.PHONY: all dev lib dll test test-cli test-asan fixtures clean-test
+.PHONY: all dev lib dll test test-cli test-asan test-ubsan fixtures clean-test
 
 all: $(TARGET)
 
@@ -130,6 +130,28 @@ test-asan:
 	 if grep -qE "AddressSanitizer|LeakSanitizer" $$d/log; then echo "  ASAN-ERROR long-filename"; fail=1; \
 	 else echo "  clean      long-filename (#30 guard)"; fi; rm -rf $$d; \
 	 if [ $$fail -eq 0 ]; then echo "test-asan: PASS (no memory errors)"; else echo "test-asan: FAIL"; exit 1; fi
+
+# UndefinedBehaviorSanitizer regression guard. Builds packJPG with UBSan and
+# round-trips every valid fixture (compress + decompress). This guards the two
+# UB classes fixed in this tree, both of which fired on ordinary valid images:
+#   * negative shift exponent in the DEVLI macro (1 << (s-1) with s == 0);
+#   * signed left shift of negative DCT coefficients (`x << cs_sal`).
+# A UBSan "runtime error:" line means a regression. EXPECTED TO PASS (exit 0).
+# Requires a UBSan-capable g++/clang++.
+UBSANFLAGS = -std=c++14 -DUNIX -I. -O1 -g -fsanitize=undefined -fno-omit-frame-pointer
+test-ubsan:
+	$(CPP) $(UBSANFLAGS) $(TEST_ENG) -o $(TESTDIR)/packJPG_ubsan $(TESTLD)
+	@echo "Round-tripping valid fixtures under UndefinedBehaviorSanitizer..."
+	@fail=0; for f in $(TESTDIR)/fixtures/valid/*.jpg; do \
+	   d=$$(mktemp -d); cp "$$f" $$d/img.jpg; \
+	   UBSAN_OPTIONS=halt_on_error=0 ./$(TESTDIR)/packJPG_ubsan -p -np $$d/img.jpg >$$d/log 2>&1 || true; \
+	   rm -f $$d/img.jpg; \
+	   UBSAN_OPTIONS=halt_on_error=0 ./$(TESTDIR)/packJPG_ubsan -p -np $$d/img.pjg >>$$d/log 2>&1 || true; \
+	   if grep -q "runtime error:" $$d/log; then echo "  UBSAN-ERROR $$(basename $$f)"; \
+	     grep "runtime error:" $$d/log | head -2 | sed 's/^/    /'; fail=1; \
+	   else echo "  clean      $$(basename $$f)"; fi; rm -rf $$d; \
+	 done; \
+	 if [ $$fail -eq 0 ]; then echo "test-ubsan: PASS (no undefined behavior)"; else echo "test-ubsan: FAIL"; exit 1; fi
 
 fixtures:
 	python3 $(TESTDIR)/gen_fixtures.py

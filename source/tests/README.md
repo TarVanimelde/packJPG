@@ -116,12 +116,25 @@ boundary instead.
    Fixed by allocating with `malloc`, matching the `free()` convention and the
    sibling `get_c_data()` (which already used `malloc`).
 
-3. **Negative shift UB in `decode_jpeg` (`packjpg.cpp:3962`, `:3980`) — OPEN,
-   benign.** UBSan reports "shift exponent -1 is negative" via the `DEVLI` macro
-   when a Huffman size code is 0. It does not corrupt output (round-trips stay
-   bit-identical) and is left as a documented, separate finding rather than
-   risking a behavioural change in the coder. `make test-asan` intentionally runs
-   AddressSanitizer only, so this UB does not mask memory-safety regressions.
+3. **Undefined behavior on the valid round-trip path — FIXED.** UBSan reported
+   two UB classes that fired on ordinary, well-formed images (output stayed
+   bit-identical, so they were benign on gcc/clang, but they are real UB):
+   * **Negative shift exponent** in the `DEVLI` macro: `1 << (s - 1)` with a
+     Huffman size code `s == 0` shifts by -1. Fixed by guarding `s == 0`
+     (returns `n`, which is 0 in that case) and fully parenthesizing the macro.
+   * **Signed left shift of negative DCT coefficients** (`colldata`/`block`
+     `<< cs_sal` in the progressive successive-approximation paths). Signed
+     left shift of a negative value is UB before C++20; fixed with a
+     `signed_lshift()` helper that shifts in unsigned arithmetic (identical
+     two's-complement result). `make test-ubsan` round-trips every valid fixture
+     under UBSan as the regression guard.
+
+   NOTE (separate, still-open): fuzzing under UBSan surfaces a *different* class
+   that only fires on **malformed** input -- an out-of-range Huffman size code
+   `s` (0..255 from corrupt data) drives oversized shifts `1 << s` and
+   `BitReader::read(s)` with `s > 31` (`packjpg.cpp:4028/4132`, `bitops.cpp:50`).
+   That needs bounding `s` to the valid range (<= 15) after decoding and is left
+   as a documented follow-up.
 
 4. **`packJPG` returns exit code 0 even on error.** The CLI prints an error
    summary but still exits 0 (observed on every malformed input). The reliable

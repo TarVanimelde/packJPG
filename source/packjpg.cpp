@@ -306,7 +306,7 @@ packJPG by Matthias Stirner, 01/2016
 // #define QUN_V(v,cm,bp)	( ( QUANT(cm,bp) > 0 ) ? ( ( v > 0 ) ? ( v + (QUANT(cm,bp)/2) ) /  QUANT(cm,bp) : ( v - (QUANT(cm,bp)/2) ) /  QUANT(cm,bp) ) : 0 )
 
 #define ENVLI(s,v)		( ( v > 0 ) ? v : ( v - 1 ) + ( 1 << s ) )
-#define DEVLI(s,n)		( ( n >= ( 1 << (s - 1) ) ) ? n : n + 1 - ( 1 << s ) )
+#define DEVLI(s,n)		( ( (s) == 0 ) ? (n) : ( ( (n) >= ( 1 << ((s) - 1) ) ) ? (n) : (n) + 1 - ( 1 << (s) ) ) )
 #define E_ENVLI(s,v)	( v - ( 1 << s ) )
 #define E_DEVLI(s,n)	( n + ( 1 << s ) )
 
@@ -332,6 +332,14 @@ static inline void* frealloc( void* ptr, size_t size ) {
 	void* n_ptr = realloc( ptr, (size) ? size : 1 );
 	if ( n_ptr == NULL ) free( ptr );
 	return n_ptr;
+}
+
+// Left shift that is well-defined for negative values: signed left shift is
+// undefined behaviour before C++20, so compute it in unsigned arithmetic
+// (two's complement) and convert back -- the value is identical to what the
+// old `x << n` produced on the compilers packJPG targets.
+static inline int signed_lshift( int value, int shift ) {
+	return ( int )( ( unsigned int ) value << shift );
 }
 
 
@@ -2192,6 +2200,9 @@ INTERN bool read_jpeg( void )
 								if ( rst_err == NULL ) {
 									snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 									errorlevel = 2;
+									delete ( hdrw );
+									delete ( huffw );
+									free ( segment );
 									return false;
 								}
 							}
@@ -2202,6 +2213,9 @@ INTERN bool read_jpeg( void )
 							if ( rst_err == NULL ) {
 								snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
 								errorlevel = 2;
+								delete ( hdrw );
+								delete ( huffw );
+								free ( segment );
 								return false;
 							}
 							if ( crst > 255 ) {
@@ -2564,7 +2578,7 @@ INTERN bool decode_jpeg( void )
 						lastdc[ cmp ] = colldata[cmp][0][dpos];
 						
 						// bitshift for succesive approximation
-						colldata[cmp][0][dpos] <<= cs_sal;
+						colldata[cmp][0][dpos] = signed_lshift( colldata[cmp][0][dpos], cs_sal );
 						
 						// next mcupos if no error happened
 						if ( sta != -1 )
@@ -2580,7 +2594,7 @@ INTERN bool decode_jpeg( void )
 							block );
 						
 						// shift in next bit
-						colldata[cmp][0][dpos] += block[0] << cs_sal;
+						colldata[cmp][0][dpos] += signed_lshift( block[0], cs_sal );
 						
 						// next mcupos if no error happened
 						if ( sta != -1 )
@@ -2632,7 +2646,7 @@ INTERN bool decode_jpeg( void )
 							lastdc[ cmp ] = colldata[cmp][0][dpos];
 							
 							// bitshift for succesive approximation
-							colldata[cmp][0][dpos] <<= cs_sal;
+							colldata[cmp][0][dpos] = signed_lshift( colldata[cmp][0][dpos], cs_sal );
 							
 							// check for errors, increment dpos otherwise
 							if ( sta != -1 )
@@ -2648,7 +2662,7 @@ INTERN bool decode_jpeg( void )
 								block );
 							
 							// shift in next bit
-							colldata[cmp][0][dpos] += block[0] << cs_sal;
+							colldata[cmp][0][dpos] += signed_lshift( block[0], cs_sal );
 							
 							// check for errors, increment dpos otherwise
 							if ( sta != -1 )
@@ -2681,7 +2695,7 @@ INTERN bool decode_jpeg( void )
 							
 								// copy to colldata
 								for ( bpos = cs_from; bpos < eob; bpos++ )
-									colldata[ cmp ][ bpos ][ dpos ] = block[ bpos ] << cs_sal;
+									colldata[ cmp ][ bpos ][ dpos ] = signed_lshift( block[ bpos ], cs_sal );
 							} else eobrun--;
 							
 							// check for errors
@@ -2730,7 +2744,7 @@ INTERN bool decode_jpeg( void )
 								
 							// copy back to colldata
 							for ( bpos = cs_from; bpos <= cs_to; bpos++ )
-								colldata[ cmp ][ bpos ][ dpos ] += block[ bpos ] << cs_sal;
+								colldata[ cmp ][ bpos ][ dpos ] += signed_lshift( block[ bpos ], cs_sal );
 							
 							// proceed only if no error encountered
 							if ( eob < 0 ) sta = -1;
