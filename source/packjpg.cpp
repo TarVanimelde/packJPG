@@ -583,6 +583,7 @@ INTERN unsigned char* eobyhigh[4]      = { NULL }; // eob in y direction (for hi
 INTERN unsigned char* zdstxlow[4]		= { NULL }; // # of non zeroes for first row
 INTERN unsigned char* zdstylow[4]		= { NULL }; // # of non zeroes for first collumn
 INTERN signed short*  colldata[4][64]  = {{NULL}}; // collection sorted DCT coefficients
+INTERN signed short*  colldata_mem[4]  = { NULL }; // one contiguous block backing all 64 bands of each component (see alloc/reset_buffers)
 
 INTERN unsigned char* freqscan[4]      = { NULL }; // optimized order for frequency scans (only pointers to scans)
 INTERN unsigned char  zsrtscan[4][64];				// zero optimized frequency scan
@@ -2060,10 +2061,11 @@ INTERN bool reset_buffers( void )
 		zdstylow[ cmp ] = NULL;
 		freqscan[ cmp ] = (unsigned char*) stdscan;
 		
-		for ( bpos = 0; bpos < 64; bpos++ ) {
-			if ( colldata[ cmp ][ bpos ] != NULL ) free( colldata[cmp][bpos] );
+		// colldata's 64 bands share one contiguous per-component block
+		if ( colldata_mem[ cmp ] != NULL ) free( colldata_mem[ cmp ] );
+		colldata_mem[ cmp ] = NULL;
+		for ( bpos = 0; bpos < 64; bpos++ )
 			colldata[ cmp ][ bpos ] = NULL;
-		}		
 	}
 	
 	
@@ -3601,14 +3603,17 @@ INTERN bool jpg_setup_imginfo( void )
 	// alloc memory for further operations
 	for ( cmp = 0; cmp < cmpc; cmp++ )
 	{
-		// alloc memory for colls
+		// alloc memory for colls: one contiguous block holds all 64 bands
+		// (band bpos lives at offset bpos*bc), so the 64 band pointers just
+		// index into it. size_t avoids overflow of 64*bc on very large images.
+		colldata_mem[cmp] = (short int*) calloc ( (size_t) 64 * cmpnfo[cmp].bc, sizeof( short ) );
+		if (colldata_mem[cmp] == NULL) {
+			snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
+			errorlevel = 2;
+			return false;
+		}
 		for ( bpos = 0; bpos < 64; bpos++ ) {
-			colldata[cmp][bpos] = (short int*) calloc ( cmpnfo[cmp].bc, sizeof( short ) );
-			if (colldata[cmp][bpos] == NULL) {
-				snprintf( errormessage, MSG_SIZE, MEM_ERRMSG );
-				errorlevel = 2;
-				return false;
-			}
+			colldata[cmp][bpos] = colldata_mem[cmp] + (size_t) bpos * cmpnfo[cmp].bc;
 		}
 		
 		// alloc memory for zdstlist / eob x / eob y
