@@ -74,6 +74,37 @@ for f in "$INVALID"/*; do
     rm -rf "$work"
 done
 
+echo "== CLI output directory (-out) =="
+# a representative fixture is enough; the redirect logic is content-independent
+sample="$(ls "$VALID"/*.jpg | head -1)"
+if [ -n "$sample" ]; then
+    work="$(mktemp -d)"
+    mkdir -p "$work/src" "$work/out" "$work/out2"
+    cp "$sample" "$work/src/img.jpg"; cp "$sample" "$work/orig.jpg"
+    # (1) compress into out/ -> output must land there, NOT next to the input
+    "$BIN" -p -np -o -out "$work/out" "$work/src/img.jpg" >/dev/null 2>&1
+    if [ -f "$work/out/img.pjg" ] && [ ! -f "$work/src/img.pjg" ]; then
+        green "-out redirects compressed output into the target directory"
+    else
+        red "-out did not place img.pjg in the target directory"
+    fi
+    # (2) decompress with -out into out2/ and byte-compare to the original
+    "$BIN" -p -np -o -out "$work/out2" "$work/out/img.pjg" >/dev/null 2>&1
+    if [ -f "$work/out2/img.jpg" ] && cmp -s "$work/orig.jpg" "$work/out2/img.jpg"; then
+        green "-out round-trip is bit-identical"
+    else
+        red "-out round-trip not bit-identical"
+    fi
+    # (3) a missing output directory must be reported clearly and produce no file
+    out="$("$BIN" -p -np -o -out "$work/nope" "$work/src/img.jpg" 2>&1)"
+    if printf '%s' "$out" | grep -qi "output directory does not exist" && [ ! -f "$work/nope/img.pjg" ]; then
+        green "-out with a missing directory errors clearly and writes nothing"
+    else
+        red "-out with a missing directory did not report the expected error"
+    fi
+    rm -rf "$work"
+fi
+
 echo
 echo "CLI golden: $pass passed, $fail failed."
 [ "$fail" -eq 0 ]

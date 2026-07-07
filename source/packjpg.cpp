@@ -68,6 +68,7 @@ Command line switches
  -v?   level of verbosity; 0,1 or 2 is allowed (default 0)
  -np   no pause after processing files
  -o    overwrite existing files
+ -out  write output files to the given directory (must already exist)
  -p    proceed on warnings
  -d    discard meta-info
 
@@ -278,6 +279,7 @@ packJPG by Matthias Stirner, 01/2016
 #include <memory>
 #include <stdexcept>
 #include <vector>
+#include <sys/stat.h>
 
 #include "bitops.h"
 #include "aricoder.h"
@@ -515,6 +517,10 @@ INTERN inline char* create_filename( const char* base, const char* extension );
 INTERN inline char* unique_filename( const char* base, const char* extension );
 INTERN inline void set_extension( char* filename, const char* extension );
 INTERN inline void add_underscore( char* filename );
+INTERN inline const char* path_basename( const char* path );
+INTERN inline bool ends_with_separator( const char* path );
+INTERN inline char* redirect_base( const char* base );
+INTERN inline bool dir_exists( const char* path );
 #endif
 INTERN inline bool file_exists( const char* filename );
 
@@ -680,6 +686,7 @@ INTERN int  errorlevel;
 #if !defined( BUILD_LIB )
 INTERN int  verbosity  = -1;	// level of verbosity
 INTERN bool overwrite  = false;	// overwrite files yes / no
+INTERN char* outdir    = NULL;	// output directory (-out <dir>); points into argv, NULL = alongside input
 INTERN bool wait_exit  = true;	// pause after finished yes / no
 INTERN int  verify_lv  = 0;		// verification level ( none (0), simple (1), detailed output (2) )
 INTERN int  err_tol    = 1;		// error threshold ( proceed on warnings yes (2) / no (1) )
@@ -1215,6 +1222,13 @@ INTERN void initialize_options( int argc, char** argv )
 		else if ( strcmp((*argv), "-o" ) == 0 ) {
 			overwrite = true;
 		}
+		else if ( strcmp((*argv), "-out" ) == 0 ) {
+			// the next argument is the output directory
+			if ( argc > 1 ) {
+				argc--; argv++;
+				outdir = *argv;
+			}
+		}
 		#if defined(DEV_BUILD)
 		else if ( strcmp((*argv), "-dev") == 0 ) {
 			developer = true;
@@ -1566,6 +1580,7 @@ INTERN void show_help( void )
 	fprintf( msgout, " [-v?]    set level of verbosity (max: 2) (def: 0)\n" );
 	fprintf( msgout, " [-np]    no pause after processing files\n" );
 	fprintf( msgout, " [-o]     overwrite existing files\n" );
+	fprintf( msgout, " [-out d] write output files to directory d (must exist)\n" );
 	fprintf( msgout, " [-p]     proceed on warnings\n" );
 	fprintf( msgout, " [-d]     discard meta-info\n" );
 	#if defined(DEV_BUILD)
@@ -1871,6 +1886,14 @@ INTERN bool check_file( void )
 		return false;
 	}
 	
+	// if an output directory was requested it must already exist (we do not
+	// create it); fail with a clear message rather than a generic open error
+	if ( !pipe_on && ( outdir != NULL ) && !dir_exists( outdir ) ) {
+		snprintf( errormessage, MSG_SIZE, "output directory does not exist: %s", outdir );
+		errorlevel = 2;
+		return false;
+	}
+
 	// check file id, determine filetype
 	if ( ( fileid[0] == 0xFF ) && ( fileid[1] == 0xD8 ) ) {
 		// file is JPEG
@@ -6820,18 +6843,102 @@ INTERN inline void progress_bar( int current, int last )
 #endif
 
 /* -----------------------------------------------
+	returns the filename portion of a path (after the last / or \)
+	----------------------------------------------- */
+#if !defined(BUILD_LIB)
+INTERN inline const char* path_basename( const char* path )
+{
+	const char* cut = strrchr( path, '/' );
+	// '\' is a path separator only on Windows; on POSIX it is a valid filename
+	// character, so treating it as a separator there would truncate legitimate
+	// names (e.g. a file literally called "a\b.jpg").
+#if defined(_WIN32) || defined(WIN32)
+	const char* bslash = strrchr( path, '\\' );
+	if ( ( bslash != NULL ) && ( ( cut == NULL ) || ( bslash > cut ) ) )
+		cut = bslash;
+#endif
+	return ( cut != NULL ) ? cut + 1 : path;
+}
+#endif
+
+/* -----------------------------------------------
+	true if the last character of `path` is a path separator
+	----------------------------------------------- */
+#if !defined(BUILD_LIB)
+INTERN inline bool ends_with_separator( const char* path )
+{
+	size_t n = strlen( path );
+	if ( n == 0 ) return false;
+	if ( path[n-1] == '/' ) return true;
+#if defined(_WIN32) || defined(WIN32)
+	if ( path[n-1] == '\\' ) return true;
+#endif
+	return false;
+}
+#endif
+
+/* -----------------------------------------------
+	true if `path` names an existing directory
+	----------------------------------------------- */
+#if !defined(BUILD_LIB)
+INTERN inline bool dir_exists( const char* path )
+{
+	// Some C runtimes (notably Windows/MSVCRT) fail stat() on a directory path
+	// that ends with a separator, so strip a single trailing one before the
+	// check (POSIX handles trailing slashes fine; stripping is harmless there).
+	char* tmp = NULL;
+	size_t n = strlen( path );
+	if ( n > 1 && ends_with_separator( path ) ) {
+		tmp = (char*) calloc( n, sizeof( char ) ); // (n-1) chars + NUL
+		if ( tmp != NULL ) { memcpy( tmp, path, n - 1 ); path = tmp; }
+	}
+	struct stat st;
+	bool ok = ( stat( path, &st ) == 0 ) && ( ( st.st_mode & S_IFDIR ) != 0 );
+	free( tmp );
+	return ok;
+}
+#endif
+
+/* -----------------------------------------------
+	copy of `base`, but with its directory replaced by `outdir` when an output
+	directory was requested (-out). Caller frees. Keeps the input basename.
+	----------------------------------------------- */
+#if !defined(BUILD_LIB)
+INTERN inline char* redirect_base( const char* base )
+{
+	if ( outdir == NULL ) {
+		char* copy = (char*) calloc( strlen( base ) + 1, sizeof( char ) );
+		if ( copy != NULL ) strcpy( copy, base );
+		return copy;
+	}
+	const char* bn = path_basename( base );
+	size_t dl = strlen( outdir );
+	// add a separator unless outdir already ends with one
+	int sep = ( dl > 0 && !ends_with_separator( outdir ) ) ? 1 : 0;
+	char* out = (char*) calloc( dl + sep + strlen( bn ) + 1, sizeof( char ) );
+	if ( out == NULL ) return NULL;
+	strcpy( out, outdir );
+	if ( sep ) strcat( out, "/" ); // '/' is accepted on Windows too
+	strcat( out, bn );
+	return out;
+}
+#endif
+
+/* -----------------------------------------------
 	creates filename, callocs memory for it
 	----------------------------------------------- */
 #if !defined(BUILD_LIB)
 INTERN inline char* create_filename( const char* base, const char* extension )
 {
-	int len = strlen( base ) + ( ( extension == NULL ) ? 0 : strlen( extension ) + 1 ) + 1;	
-	char* filename = (char*) calloc( len, sizeof( char ) );	
-	
+	char* rbase = redirect_base( base );
+	int len = strlen( rbase ) + ( ( extension == NULL ) ? 0 : strlen( extension ) + 1 ) + 1;
+	char* filename = (char*) calloc( len, sizeof( char ) );
+
 	// create a filename from base & extension
-	strcpy( filename, base );
+	strcpy( filename, rbase );
 	set_extension( filename, extension );
-	
+	free( rbase );
+
 	return filename;
 }
 #endif
@@ -6842,18 +6949,20 @@ INTERN inline char* create_filename( const char* base, const char* extension )
 #if !defined(BUILD_LIB)
 INTERN inline char* unique_filename( const char* base, const char* extension )
 {
-	int len = strlen( base ) + ( ( extension == NULL ) ? 0 : strlen( extension ) + 1 ) + 1;	
-	char* filename = (char*) calloc( len, sizeof( char ) );	
-	
+	char* rbase = redirect_base( base );
+	int len = strlen( rbase ) + ( ( extension == NULL ) ? 0 : strlen( extension ) + 1 ) + 1;
+	char* filename = (char*) calloc( len, sizeof( char ) );
+
 	// create a unique filename using underscores
-	strcpy( filename, base );
+	strcpy( filename, rbase );
+	free( rbase );
 	set_extension( filename, extension );
 	while ( file_exists( filename ) ) {
 		len += sizeof( char );
 		filename = (char*) realloc( filename, len );
 		add_underscore( filename );
 	}
-	
+
 	return filename;
 }
 #endif
@@ -6864,12 +6973,14 @@ INTERN inline char* unique_filename( const char* base, const char* extension )
 #if !defined(BUILD_LIB)
 INTERN inline void set_extension( char* filename, const char* extension )
 {
-	char* extstr;
-	
-	// find position of extension in filename	
-	extstr = ( strrchr( filename, '.' ) == NULL ) ?
-		strrchr( filename, '\0' ) : strrchr( filename, '.' );
-	
+	// only look for the extension dot within the basename, so a '.' in a
+	// directory component (e.g. an -out path like "out.d/") is never mistaken
+	// for the file extension
+	char* bn = (char*) path_basename( filename );
+	char* extstr = strrchr( bn, '.' );
+	if ( extstr == NULL )
+		extstr = strrchr( bn, '\0' ); // point at the terminating NUL (end of name)
+
 	// set new extension
 	if ( extension != NULL ) {
 		(*extstr++) = '.';
