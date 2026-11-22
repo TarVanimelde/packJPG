@@ -8,12 +8,36 @@
 #include <limits>
 #include <stdexcept>
 
+#if defined(__GNUC__) || defined(__clang__)
+#define PJG_RESTRICT __restrict__
+#elif defined(_MSC_VER)
+#define PJG_RESTRICT __restrict
+#else
+#define PJG_RESTRICT
+#endif
+
 namespace {
 
 constexpr std::size_t kMaxGenericStreamBytes      = 64u << 20; // 64 MiB
 constexpr std::size_t kMaxGenericExpansionPerByte = 2048u;     // > 1411:1 theoretical max of c_lim=255
 constexpr std::size_t kMaxRstErrBytes             = 65536u;
 
+inline int skip_zero_zdst( const unsigned char* zdstls, int px, int row_w ) noexcept
+{
+	if ( ( px < row_w ) && ( zdstls[ px ] != 0 ) ) {
+		return px;
+	}
+	while ( px + 8 <= row_w ) {
+		std::uint64_t z8 = 0;
+		std::memcpy( &z8, zdstls + px, 8 );
+		if ( z8 != 0 ) break;
+		px += 8;
+	}
+	while ( ( px < row_w ) && ( zdstls[ px ] == 0 ) ) {
+		++px;
+	}
+	return px;
+}
 
 void get_context_nnb( int pos, int w, int* a, int* b )
 {
@@ -123,26 +147,79 @@ inline int pjg_aavrg_context( const unsigned short* abs_store, const int* offset
 	return ( w_ctx != 0 ) ? ( ctx_avr + ( w_ctx / 2 ) ) / w_ctx : 0;
 }
 
-int pjg_lakh_context( const short* const* coeffs_x, int neighbor_off, const int* pred_cf, int pos )
-{
-	std::int64_t pred = 0;
-	const int npos = pos - neighbor_off;
+struct LakhBandSpec {
+	const short* coeffs_x[ 8 ]{};
+	int pred_cf[ 8 ]{};
+	unsigned char* zdstls = nullptr;
+	int neighbor_off = 0;
+	bool check_x = false;
+	bool fits_i32 = false;
+};
 
-	pred -= static_cast<std::int64_t>( coeffs_x[ 1 ][ pos ] + coeffs_x[ 1 ][ npos ] ) * pred_cf[ 1 ];
-	pred -= static_cast<std::int64_t>( coeffs_x[ 2 ][ pos ] - coeffs_x[ 2 ][ npos ] ) * pred_cf[ 2 ];
-	pred -= static_cast<std::int64_t>( coeffs_x[ 3 ][ pos ] + coeffs_x[ 3 ][ npos ] ) * pred_cf[ 3 ];
-	pred -= static_cast<std::int64_t>( coeffs_x[ 4 ][ pos ] - coeffs_x[ 4 ][ npos ] ) * pred_cf[ 4 ];
-	pred -= static_cast<std::int64_t>( coeffs_x[ 5 ][ pos ] + coeffs_x[ 5 ][ npos ] ) * pred_cf[ 5 ];
-	pred -= static_cast<std::int64_t>( coeffs_x[ 6 ][ pos ] - coeffs_x[ 6 ][ npos ] ) * pred_cf[ 6 ];
-	pred -= static_cast<std::int64_t>( coeffs_x[ 7 ][ pos ] + coeffs_x[ 7 ][ npos ] ) * pred_cf[ 7 ];
-	if ( pred_cf[ 0 ] != 0 ) {
-		const std::int64_t half = pred_cf[ 0 ] / 2;
-		pred = ( ( pred > 0 ) ? ( pred + half ) : ( pred - half ) ) / pred_cf[ 0 ];
+LakhBandSpec setup_lakh_band( CodecContext& ctx, int cmp, int w, int b_x, int b_y ) noexcept
+{
+	LakhBandSpec s{};
+	s.check_x        = ( b_x == 0 );
+	s.neighbor_off   = s.check_x ? 1 : w;
+	s.zdstls         = s.check_x ? ctx.zdstylow[ cmp ].data() : ctx.zdstxlow[ cmp ].data();
+	std::int64_t max_numer = 0;
+	int max_c0       = 0;
+	for ( int k = 0; k < 8; k++ ) {
+		const int zpos    = s.check_x ? zigzag[ k + ( 8 * b_y ) ] : zigzag[ b_x + ( 8 * k ) ];
+		s.coeffs_x[ k ]   = ctx.colldata[ cmp ][ zpos ].data();
+		const int q       = ctx.quant( cmp, zpos );
+		s.pred_cf[ k ]    = icos_base_8x8[ static_cast<std::size_t>( k ) * 8u ] * q;
+		const int max_mag = ( 1 << bitlen_1024p( ctx.max_v( cmp, zpos ) ) ) - 1;
+		if ( k == 0 ) {
+			max_c0 = max_mag;
+		}
+		else {
+			max_numer += 2LL * max_mag * s.pred_cf[ k ];
+		}
+	}
+	max_numer += s.pred_cf[ 0 ] / 2;
+	s.fits_i32 = ( max_numer + max_c0 <= std::numeric_limits<int>::max() );
+	return s;
+}
+
+inline int pjg_lakh_context( const LakhBandSpec& s, int pos ) noexcept
+{
+	const int npos = pos - s.neighbor_off;
+	if ( s.fits_i32 ) {
+		int pred = 0;
+		pred -= ( static_cast<int>( s.coeffs_x[ 1 ][ pos ] ) + static_cast<int>( s.coeffs_x[ 1 ][ npos ] ) ) * s.pred_cf[ 1 ];
+		pred -= ( static_cast<int>( s.coeffs_x[ 2 ][ pos ] ) - static_cast<int>( s.coeffs_x[ 2 ][ npos ] ) ) * s.pred_cf[ 2 ];
+		pred -= ( static_cast<int>( s.coeffs_x[ 3 ][ pos ] ) + static_cast<int>( s.coeffs_x[ 3 ][ npos ] ) ) * s.pred_cf[ 3 ];
+		pred -= ( static_cast<int>( s.coeffs_x[ 4 ][ pos ] ) - static_cast<int>( s.coeffs_x[ 4 ][ npos ] ) ) * s.pred_cf[ 4 ];
+		pred -= ( static_cast<int>( s.coeffs_x[ 5 ][ pos ] ) + static_cast<int>( s.coeffs_x[ 5 ][ npos ] ) ) * s.pred_cf[ 5 ];
+		pred -= ( static_cast<int>( s.coeffs_x[ 6 ][ pos ] ) - static_cast<int>( s.coeffs_x[ 6 ][ npos ] ) ) * s.pred_cf[ 6 ];
+		pred -= ( static_cast<int>( s.coeffs_x[ 7 ][ pos ] ) + static_cast<int>( s.coeffs_x[ 7 ][ npos ] ) ) * s.pred_cf[ 7 ];
+		if ( s.pred_cf[ 0 ] != 0 ) {
+			const int half = s.pred_cf[ 0 ] / 2;
+			pred = ( ( pred > 0 ) ? ( pred + half ) : ( pred - half ) ) / s.pred_cf[ 0 ];
+		}
+		else {
+			pred = 0;
+		}
+		return pred + static_cast<int>( s.coeffs_x[ 0 ][ npos ] );
+	}
+
+	std::int64_t pred = 0;
+	pred -= static_cast<std::int64_t>( static_cast<int>( s.coeffs_x[ 1 ][ pos ] ) + static_cast<int>( s.coeffs_x[ 1 ][ npos ] ) ) * s.pred_cf[ 1 ];
+	pred -= static_cast<std::int64_t>( static_cast<int>( s.coeffs_x[ 2 ][ pos ] ) - static_cast<int>( s.coeffs_x[ 2 ][ npos ] ) ) * s.pred_cf[ 2 ];
+	pred -= static_cast<std::int64_t>( static_cast<int>( s.coeffs_x[ 3 ][ pos ] ) + static_cast<int>( s.coeffs_x[ 3 ][ npos ] ) ) * s.pred_cf[ 3 ];
+	pred -= static_cast<std::int64_t>( static_cast<int>( s.coeffs_x[ 4 ][ pos ] ) - static_cast<int>( s.coeffs_x[ 4 ][ npos ] ) ) * s.pred_cf[ 4 ];
+	pred -= static_cast<std::int64_t>( static_cast<int>( s.coeffs_x[ 5 ][ pos ] ) + static_cast<int>( s.coeffs_x[ 5 ][ npos ] ) ) * s.pred_cf[ 5 ];
+	pred -= static_cast<std::int64_t>( static_cast<int>( s.coeffs_x[ 6 ][ pos ] ) - static_cast<int>( s.coeffs_x[ 6 ][ npos ] ) ) * s.pred_cf[ 6 ];
+	pred -= static_cast<std::int64_t>( static_cast<int>( s.coeffs_x[ 7 ][ pos ] ) + static_cast<int>( s.coeffs_x[ 7 ][ npos ] ) ) * s.pred_cf[ 7 ];
+	if ( s.pred_cf[ 0 ] != 0 ) {
+		const std::int64_t half = s.pred_cf[ 0 ] / 2;
+		pred = ( ( pred > 0 ) ? ( pred + half ) : ( pred - half ) ) / s.pred_cf[ 0 ];
 	}
 	else {
 		pred = 0;
 	}
-	pred += coeffs_x[ 0 ][ npos ];
+	pred += s.coeffs_x[ 0 ][ npos ];
 
 	if ( pred < std::numeric_limits<int>::min() ) return std::numeric_limits<int>::min();
 	if ( pred > std::numeric_limits<int>::max() ) return std::numeric_limits<int>::max();
@@ -161,9 +238,18 @@ void pjg_get_zerosort_scan( const CodecContext& ctx, unsigned char* sv, int cmp 
 	}
 
 	for ( int bpos = 0; bpos < 64; bpos++ ) {
-		const short* band = ctx.colldata[ cmp ][ bpos ].data();
-		for ( int dpos = 0; dpos < bc; dpos++ )
-			if ( band[ dpos ] == 0 ) zdist[ bpos ]++;
+		const short* PJG_RESTRICT band = ctx.colldata[ cmp ][ bpos ].data();
+		unsigned int zc = 0;
+		for ( int dpos = 0; dpos < bc; ) {
+			const int end = std::min( bc, dpos + 256 );
+			unsigned short sub = 0;
+			for ( int i = dpos; i < end; i++ ) {
+				sub = static_cast<unsigned short>( sub + ( band[ i ] == 0 ) );
+			}
+			zc += sub;
+			dpos = end;
+		}
+		zdist[ bpos ] = zc;
 	}
 
 	bool done = false;
@@ -518,13 +604,12 @@ bool pjg_encode_ac_high( CodecContext& ctx, ArithmeticEncoder* enc, int cmp )
 		const int max_val = ctx.max_v( cmp, bpos );
 		const int max_len = bitlen_1024p( max_val );
 
-		for ( int dpos = 0, p_y = 0; dpos < bc; ++p_y ) {
-			const int row_w = std::min( w, bc - dpos );
-			for ( int p_x = 0; p_x < row_w; ++p_x, ++dpos ) {
-				if ( zdstls[ dpos ] == 0 )
-					continue;
-
-				const int r_x = w - ( p_x + 1 );
+		for ( int row_base = 0, p_y = 0; row_base < bc; row_base += w, ++p_y ) {
+			const int row_w = std::min( w, bc - row_base );
+			const unsigned char* row_zdst = zdstls + row_base;
+			for ( int p_x = skip_zero_zdst( row_zdst, 0, row_w ); p_x < row_w; p_x = skip_zero_zdst( row_zdst, p_x + 1, row_w ) ) {
+				const int dpos = row_base + p_x;
+				const int r_x  = w - ( p_x + 1 );
 
 				const int snum    = segm_tab[ zdstls[ dpos ] ];
 				const int ctx_avr = pjg_aavrg_context( absv_store, c_absc_off, c_weight, dpos, p_y, p_x, r_x );
@@ -569,9 +654,6 @@ bool pjg_encode_ac_high( CodecContext& ctx, ArithmeticEncoder* enc, int cmp )
 
 bool pjg_encode_ac_low( CodecContext& ctx, ArithmeticEncoder* enc, int cmp )
 {
-	const short* coeffs_x[ 8 ];
-	int pred_cf[ 8 ];
-
 	auto mod_len = init_model_s( 11, ( ctx.segm_cnt[ cmp ] > 11 ) ? ctx.segm_cnt[ cmp ] : 11, 2 );
 	auto mod_res = init_model_b( 1 << 4, 2 );
 	auto mod_top = init_model_b( ( ctx.nois_trs[ cmp ] > 4 ) ? ( 1 << ctx.nois_trs[ cmp ] ) : ( 1 << 4 ), 3, 16 );
@@ -581,47 +663,26 @@ bool pjg_encode_ac_low( CodecContext& ctx, ArithmeticEncoder* enc, int cmp )
 	const int w  = ctx.cmpnfo[ cmp ].bch;
 
 	for ( int i = 2; i < 16; i++ ) {
-		int b_x = ( i % 2 == 0 ) ? ( i / 2 ) : 0;
-		int b_y = ( i % 2 == 1 ) ? ( i / 2 ) : 0;
+		const int b_x  = ( i % 2 == 0 ) ? ( i / 2 ) : 0;
+		const int b_y  = ( i % 2 == 1 ) ? ( i / 2 ) : 0;
 		const int bpos = static_cast<int>( zigzag[ b_x + ( 8 * b_y ) ] );
 
 		const short* coeffs = ctx.colldata[ cmp ][ bpos ].data();
-		int neighbor_off = 0;
-		unsigned char* zdstls = nullptr;
-		const bool check_x = ( b_x == 0 );
-
-		if ( check_x ) {
-			for ( int k = 0; k < 8; k++ ) {
-				const int zpos = zigzag[ k + ( 8 * b_y ) ];
-				coeffs_x[ k ] = ctx.colldata[ cmp ][ zpos ].data();
-				pred_cf[ k ]  = icos_base_8x8[ static_cast<std::size_t>( k ) * 8u ] * ctx.quant( cmp, zpos );
-			}
-			neighbor_off = 1;
-			zdstls = ctx.zdstylow[ cmp ].data();
-		}
-		else {
-			for ( int k = 0; k < 8; k++ ) {
-				const int zpos = zigzag[ b_x + ( 8 * k ) ];
-				coeffs_x[ k ] = ctx.colldata[ cmp ][ zpos ].data();
-				pred_cf[ k ]  = icos_base_8x8[ static_cast<std::size_t>( k ) * 8u ] * ctx.quant( cmp, zpos );
-			}
-			neighbor_off = w;
-			zdstls = ctx.zdstxlow[ cmp ].data();
-		}
+		const LakhBandSpec lspec = setup_lakh_band( ctx, cmp, w, b_x, b_y );
+		unsigned char* zdstls = lspec.zdstls;
 
 		const int max_valp = ctx.max_v( cmp, bpos );
 		const int max_valn = -max_valp;
 		const int max_len  = bitlen_1024p( max_valp );
 		const int thrs_bp  = ( max_len > ctx.nois_trs[ cmp ] ) ? ( max_len - ctx.nois_trs[ cmp ] ) : 0;
 
-		for ( int dpos = 0, p_y = 0; dpos < bc; ++p_y ) {
-			const int row_w = std::min( w, bc - dpos );
-			for ( int p_x = 0; p_x < row_w; ++p_x, ++dpos ) {
-				if ( zdstls[ dpos ] == 0 )
-					continue;
-
-				int ctx_lak = ( ( check_x ? p_x : p_y ) > 0 )
-					? pjg_lakh_context( coeffs_x, neighbor_off, pred_cf, dpos )
+		for ( int row_base = 0, p_y = 0; row_base < bc; row_base += w, ++p_y ) {
+			const int row_w = std::min( w, bc - row_base );
+			const unsigned char* row_zdst = zdstls + row_base;
+			for ( int p_x = skip_zero_zdst( row_zdst, 0, row_w ); p_x < row_w; p_x = skip_zero_zdst( row_zdst, p_x + 1, row_w ) ) {
+				const int dpos = row_base + p_x;
+				int ctx_lak = ( ( lspec.check_x ? p_x : p_y ) > 0 )
+					? pjg_lakh_context( lspec, dpos )
 					: 0;
 				ctx_lak = clamped( max_valn, max_valp, ctx_lak );
 				const int ctx_len = bitlen_2048n( ctx_lak );
@@ -655,7 +716,6 @@ bool pjg_encode_ac_low( CodecContext& ctx, ArithmeticEncoder* enc, int cmp )
 					mod_sgn->shift_context( ctx_sgn );
 					encode_ari( enc, mod_sgn, sgn );
 					zdstls[ dpos ]--;
-
 				}
 			}
 		}
@@ -872,13 +932,12 @@ bool pjg_decode_ac_high( CodecContext& ctx, ArithmeticDecoder* dec, int cmp )
 		const int max_val = ctx.max_v( cmp, bpos );
 		const int max_len = bitlen_1024p( max_val );
 
-		for ( int dpos = 0, p_y = 0; dpos < bc; ++p_y ) {
-			const int row_w = std::min( w, bc - dpos );
-			for ( int p_x = 0; p_x < row_w; ++p_x, ++dpos ) {
-				if ( zdstls[ dpos ] == 0 )
-					continue;
-
-				const int r_x = w - ( p_x + 1 );
+		for ( int row_base = 0, p_y = 0; row_base < bc; row_base += w, ++p_y ) {
+			const int row_w = std::min( w, bc - row_base );
+			const unsigned char* row_zdst = zdstls + row_base;
+			for ( int p_x = skip_zero_zdst( row_zdst, 0, row_w ); p_x < row_w; p_x = skip_zero_zdst( row_zdst, p_x + 1, row_w ) ) {
+				const int dpos = row_base + p_x;
+				const int r_x  = w - ( p_x + 1 );
 
 				const int snum    = segm_tab[ zdstls[ dpos ] ];
 				const int ctx_avr = pjg_aavrg_context( absv_store, c_absc_off, c_weight, dpos, p_y, p_x, r_x );
@@ -919,9 +978,6 @@ bool pjg_decode_ac_high( CodecContext& ctx, ArithmeticDecoder* dec, int cmp )
 
 bool pjg_decode_ac_low( CodecContext& ctx, ArithmeticDecoder* dec, int cmp )
 {
-	const short* coeffs_x[ 8 ];
-	int pred_cf[ 8 ];
-
 	auto mod_len = init_model_s( 11, ( ctx.segm_cnt[ cmp ] > 11 ) ? ctx.segm_cnt[ cmp ] : 11, 2 );
 	auto mod_res = init_model_b( 1 << 4, 2 );
 	auto mod_top = init_model_b( ( ctx.nois_trs[ cmp ] > 4 ) ? ( 1 << ctx.nois_trs[ cmp ] ) : ( 1 << 4 ), 3, 16 );
@@ -931,47 +987,26 @@ bool pjg_decode_ac_low( CodecContext& ctx, ArithmeticDecoder* dec, int cmp )
 	const int w  = ctx.cmpnfo[ cmp ].bch;
 
 	for ( int i = 2; i < 16; i++ ) {
-		int b_x = ( i % 2 == 0 ) ? ( i / 2 ) : 0;
-		int b_y = ( i % 2 == 1 ) ? ( i / 2 ) : 0;
+		const int b_x  = ( i % 2 == 0 ) ? ( i / 2 ) : 0;
+		const int b_y  = ( i % 2 == 1 ) ? ( i / 2 ) : 0;
 		const int bpos = static_cast<int>( zigzag[ b_x + ( 8 * b_y ) ] );
 
 		short* coeffs = ctx.colldata[ cmp ][ bpos ].data();
-		int neighbor_off = 0;
-		unsigned char* zdstls = nullptr;
-		const bool check_x = ( b_x == 0 );
-
-		if ( check_x ) {
-			for ( int k = 0; k < 8; k++ ) {
-				const int zpos = zigzag[ k + ( 8 * b_y ) ];
-				coeffs_x[ k ] = ctx.colldata[ cmp ][ zpos ].data();
-				pred_cf[ k ]  = icos_base_8x8[ static_cast<std::size_t>( k ) * 8u ] * ctx.quant( cmp, zpos );
-			}
-			neighbor_off = 1;
-			zdstls = ctx.zdstylow[ cmp ].data();
-		}
-		else {
-			for ( int k = 0; k < 8; k++ ) {
-				const int zpos = zigzag[ b_x + ( 8 * k ) ];
-				coeffs_x[ k ] = ctx.colldata[ cmp ][ zpos ].data();
-				pred_cf[ k ]  = icos_base_8x8[ static_cast<std::size_t>( k ) * 8u ] * ctx.quant( cmp, zpos );
-			}
-			neighbor_off = w;
-			zdstls = ctx.zdstxlow[ cmp ].data();
-		}
+		const LakhBandSpec lspec = setup_lakh_band( ctx, cmp, w, b_x, b_y );
+		unsigned char* zdstls = lspec.zdstls;
 
 		const int max_valp = ctx.max_v( cmp, bpos );
 		const int max_valn = -max_valp;
 		const int max_len  = bitlen_1024p( max_valp );
 		const int thrs_bp  = ( max_len > ctx.nois_trs[ cmp ] ) ? ( max_len - ctx.nois_trs[ cmp ] ) : 0;
 
-		for ( int dpos = 0, p_y = 0; dpos < bc; ++p_y ) {
-			const int row_w = std::min( w, bc - dpos );
-			for ( int p_x = 0; p_x < row_w; ++p_x, ++dpos ) {
-				if ( zdstls[ dpos ] == 0 )
-					continue;
-
-				int ctx_lak = ( ( check_x ? p_x : p_y ) > 0 )
-					? pjg_lakh_context( coeffs_x, neighbor_off, pred_cf, dpos )
+		for ( int row_base = 0, p_y = 0; row_base < bc; row_base += w, ++p_y ) {
+			const int row_w = std::min( w, bc - row_base );
+			const unsigned char* row_zdst = zdstls + row_base;
+			for ( int p_x = skip_zero_zdst( row_zdst, 0, row_w ); p_x < row_w; p_x = skip_zero_zdst( row_zdst, p_x + 1, row_w ) ) {
+				const int dpos = row_base + p_x;
+				int ctx_lak = ( ( lspec.check_x ? p_x : p_y ) > 0 )
+					? pjg_lakh_context( lspec, dpos )
 					: 0;
 				ctx_lak = clamped( max_valn, max_valp, ctx_lak );
 				const int ctx_len = bitlen_2048n( ctx_lak );
@@ -1000,7 +1035,6 @@ bool pjg_decode_ac_low( CodecContext& ctx, ArithmeticDecoder* dec, int cmp )
 					const int sgn = decode_ari( dec, mod_sgn );
 					coeffs[ dpos ] = static_cast<short>( ( sgn == 0 ) ? absv : -absv );
 					zdstls[ dpos ]--;
-
 				}
 			}
 		}
@@ -1040,40 +1074,6 @@ bool pjg_decode_bit( ArithmeticDecoder* dec, unsigned char* bit )
 	return true;
 }
 
-int idct_2d_fst_8x1( const CodecContext& ctx, int cmp, int dpos, int ix )
-{
-	int idct = 0;
-	const int ixy = ix << 3;
-
-	idct += ctx.colldata[ cmp ][  0 ][ dpos ] * ctx.adpt_idct_8x1[ cmp ][ ixy + 0 ];
-	idct += ctx.colldata[ cmp ][  1 ][ dpos ] * ctx.adpt_idct_8x1[ cmp ][ ixy + 1 ];
-	idct += ctx.colldata[ cmp ][  5 ][ dpos ] * ctx.adpt_idct_8x1[ cmp ][ ixy + 2 ];
-	idct += ctx.colldata[ cmp ][  6 ][ dpos ] * ctx.adpt_idct_8x1[ cmp ][ ixy + 3 ];
-	idct += ctx.colldata[ cmp ][ 14 ][ dpos ] * ctx.adpt_idct_8x1[ cmp ][ ixy + 4 ];
-	idct += ctx.colldata[ cmp ][ 15 ][ dpos ] * ctx.adpt_idct_8x1[ cmp ][ ixy + 5 ];
-	idct += ctx.colldata[ cmp ][ 27 ][ dpos ] * ctx.adpt_idct_8x1[ cmp ][ ixy + 6 ];
-	idct += ctx.colldata[ cmp ][ 28 ][ dpos ] * ctx.adpt_idct_8x1[ cmp ][ ixy + 7 ];
-
-	return idct;
-}
-
-int idct_2d_fst_1x8( const CodecContext& ctx, int cmp, int dpos, int iy )
-{
-	int idct = 0;
-	const int ixy = iy << 3;
-
-	idct += ctx.colldata[ cmp ][  0 ][ dpos ] * ctx.adpt_idct_1x8[ cmp ][ ixy + 0 ];
-	idct += ctx.colldata[ cmp ][  2 ][ dpos ] * ctx.adpt_idct_1x8[ cmp ][ ixy + 1 ];
-	idct += ctx.colldata[ cmp ][  3 ][ dpos ] * ctx.adpt_idct_1x8[ cmp ][ ixy + 2 ];
-	idct += ctx.colldata[ cmp ][  9 ][ dpos ] * ctx.adpt_idct_1x8[ cmp ][ ixy + 3 ];
-	idct += ctx.colldata[ cmp ][ 10 ][ dpos ] * ctx.adpt_idct_1x8[ cmp ][ ixy + 4 ];
-	idct += ctx.colldata[ cmp ][ 20 ][ dpos ] * ctx.adpt_idct_1x8[ cmp ][ ixy + 5 ];
-	idct += ctx.colldata[ cmp ][ 21 ][ dpos ] * ctx.adpt_idct_1x8[ cmp ][ ixy + 6 ];
-	idct += ctx.colldata[ cmp ][ 35 ][ dpos ] * ctx.adpt_idct_1x8[ cmp ][ ixy + 7 ];
-
-	return idct;
-}
-
 #if defined(USE_PLOCOI)
 inline int plocoi( int a, int b, int c )
 {
@@ -1107,40 +1107,89 @@ int dc_coll_predictor( const CodecContext& ctx, int cmp, int dpos )
 	return plocoi( a, b, c );
 }
 #else
-int dc_1ddct_predictor( CodecContext& ctx, int cmp, int dpos )
+struct Dc1dTables {
+	const short* b8x1[ 8 ]{};
+	const short* b1x8[ 8 ]{};
+	const int* w8x1_0 = nullptr;
+	const int* w8x1_7 = nullptr;
+	const int* w1x8_0 = nullptr;
+	const int* w1x8_7 = nullptr;
+};
+
+Dc1dTables make_dc1d_tables( const CodecContext& ctx, int cmp ) noexcept
 {
-	const int w  = ctx.cmpnfo[ cmp ].bch;
-	const int px = dpos % w;
-	const int py = dpos / w;
-
-	const short swap = ctx.colldata[ cmp ][ 0 ][ dpos ];
-	ctx.colldata[ cmp ][ 0 ][ dpos ] = 0;
-
-	int pred = 0;
-	if ( ( px > 0 ) && ( py > 0 ) ) {
-		const int pa = idct_2d_fst_8x1( ctx, cmp, dpos - 1, 7 );
-		const int pb = idct_2d_fst_1x8( ctx, cmp, dpos - w, 7 );
-		const int xa = idct_2d_fst_8x1( ctx, cmp, dpos, 0 );
-		const int xb = idct_2d_fst_1x8( ctx, cmp, dpos, 0 );
-		pred = ( ( pa - xa ) + ( pb - xb ) ) * ( 8 / 2 );
+	static constexpr int kB8x1[ 8 ] = { 0, 1, 5, 6, 14, 15, 27, 28 };
+	static constexpr int kB1x8[ 8 ] = { 0, 2, 3, 9, 10, 20, 21, 35 };
+	Dc1dTables t{};
+	for ( int k = 0; k < 8; k++ ) {
+		t.b8x1[ k ] = ctx.colldata[ cmp ][ kB8x1[ k ] ].data();
+		t.b1x8[ k ] = ctx.colldata[ cmp ][ kB1x8[ k ] ].data();
 	}
-	else if ( px > 0 ) {
-		const int pa = idct_2d_fst_8x1( ctx, cmp, dpos - 1, 7 );
-		const int xa = idct_2d_fst_8x1( ctx, cmp, dpos, 0 );
-		pred = ( pa - xa ) * 8;
-	}
-	else if ( py > 0 ) {
-		const int pb = idct_2d_fst_1x8( ctx, cmp, dpos - w, 7 );
-		const int xb = idct_2d_fst_1x8( ctx, cmp, dpos, 0 );
-		pred = ( pb - xb ) * 8;
-	}
+	t.w8x1_0 = &ctx.adpt_idct_8x1[ cmp ][ 0 ];
+	t.w8x1_7 = &ctx.adpt_idct_8x1[ cmp ][ 56 ];
+	t.w1x8_0 = &ctx.adpt_idct_1x8[ cmp ][ 0 ];
+	t.w1x8_7 = &ctx.adpt_idct_1x8[ cmp ][ 56 ];
+	return t;
+}
 
-	ctx.colldata[ cmp ][ 0 ][ dpos ] = swap;
+int eval_dc1d_top_only( const Dc1dTables& t, int rs, int w ) noexcept
+{
+	int pb = t.b1x8[ 0 ][ rs - w ] * t.w1x8_7[ 0 ];
+	int xb = 0;
+	for ( int k = 1; k < 8; k++ ) {
+		pb += t.b1x8[ k ][ rs - w ] * t.w1x8_7[ k ];
+		xb += t.b1x8[ k ][ rs ]     * t.w1x8_0[ k ];
+	}
+	return ( pb - xb ) * 8;
+}
 
-	pred = clamped( -( 1024 * DCT_RSC_FACTOR ), ( 1016 * DCT_RSC_FACTOR ), pred );
-	pred = pred / ctx.quant( cmp, 0 );
-	pred = dct_rescale( pred );
-	return pred;
+void accum_dc1d_row_base(
+	const Dc1dTables& t,
+	int rs,
+	int w,
+	int n,
+	bool has_top,
+	int* PJG_RESTRICT rbuf ) noexcept
+{
+	if ( has_top ) {
+		const short* PJG_RESTRICT p_dc_t = t.b1x8[ 0 ] + rs - w + 1;
+		const int wt0 = t.w1x8_7[ 0 ];
+		for ( int i = 0; i < n; i++ ) {
+			rbuf[ i ] = p_dc_t[ i ] * wt0;
+		}
+		for ( int k = 1; k < 8; k++ ) {
+			const short* PJG_RESTRICT bh_l = t.b8x1[ k ] + rs;
+			const short* PJG_RESTRICT bh_c = t.b8x1[ k ] + rs + 1;
+			const short* PJG_RESTRICT bv_t = t.b1x8[ k ] + rs - w + 1;
+			const short* PJG_RESTRICT bv_c = t.b1x8[ k ] + rs + 1;
+			const int wh7 = t.w8x1_7[ k ], wh0 = t.w8x1_0[ k ];
+			const int wv7 = t.w1x8_7[ k ], wv0 = t.w1x8_0[ k ];
+			for ( int i = 0; i < n; i++ ) {
+				rbuf[ i ] += ( bh_l[ i ] * wh7 - bh_c[ i ] * wh0 ) + ( bv_t[ i ] * wv7 - bv_c[ i ] * wv0 );
+			}
+		}
+	}
+	else {
+		std::fill( rbuf, rbuf + n, 0 );
+		for ( int k = 1; k < 8; k++ ) {
+			const short* PJG_RESTRICT bh_l = t.b8x1[ k ] + rs;
+			const short* PJG_RESTRICT bh_c = t.b8x1[ k ] + rs + 1;
+			const int wh7 = t.w8x1_7[ k ], wh0 = t.w8x1_0[ k ];
+			for ( int i = 0; i < n; i++ ) {
+				rbuf[ i ] += bh_l[ i ] * wh7 - bh_c[ i ] * wh0;
+			}
+		}
+	}
+}
+
+inline short finish_dc_diff( int raw_pred, short dc_val, int q0, int absmaxp, int corr_f, int sign ) noexcept
+{
+	int pred = clamped( -( 1024 * DCT_RSC_FACTOR ), ( 1016 * DCT_RSC_FACTOR ), raw_pred );
+	pred = ( q0 > 0 ) ? dct_rescale( pred / q0 ) : 0;
+	int val = static_cast<int>( dc_val ) + ( sign * pred );
+	if ( val > absmaxp ) val -= corr_f;
+	else if ( val < -absmaxp ) val += corr_f;
+	return static_cast<short>( val );
 }
 #endif
 
@@ -1182,6 +1231,7 @@ bool adapt_icos( CodecContext& ctx )
 	----------------------------------------------- */
 bool predict_dc( CodecContext& ctx )
 {
+#if defined(USE_PLOCOI)
 	for ( int cmp = 0; cmp < ctx.cmpc; cmp++ ) {
 		const int absmaxp = ctx.max_v( cmp, 0 );
 		const int absmaxn = -absmaxp;
@@ -1189,16 +1239,48 @@ bool predict_dc( CodecContext& ctx )
 
 		for ( int dpos = ctx.cmpnfo[ cmp ].bc - 1; dpos > 0; dpos-- ) {
 			short* coef = &ctx.colldata[ cmp ][ 0 ][ dpos ];
-#if defined(USE_PLOCOI)
 			int val = static_cast<int>( *coef ) - dc_coll_predictor( ctx, cmp, dpos );
-#else
-			int val = static_cast<int>( *coef ) - dc_1ddct_predictor( ctx, cmp, dpos );
-#endif
 			if ( val > absmaxp ) val -= corr_f;
 			else if ( val < absmaxn ) val += corr_f;
 			*coef = static_cast<short>( val );
 		}
 	}
+#else
+	std::vector<int> raw_row;
+	for ( int cmp = 0; cmp < ctx.cmpc; cmp++ ) {
+		const int w  = ctx.cmpnfo[ cmp ].bch;
+		const int bc = ctx.cmpnfo[ cmp ].bc;
+		if ( ( bc <= 1 ) || ( w <= 0 ) ) continue;
+
+		const int absmaxp   = ctx.max_v( cmp, 0 );
+		const int corr_f    = ( 2 * absmaxp ) + 1;
+		const int q0        = ctx.quant( cmp, 0 );
+		const int rows      = ( bc + w - 1 ) / w;
+		const Dc1dTables t  = make_dc1d_tables( ctx, cmp );
+		const int wl0       = t.w8x1_7[ 0 ];
+		short* dc           = ctx.colldata[ cmp ][ 0 ].data();
+
+		if ( w > 1 ) {
+			raw_row.resize( static_cast<std::size_t>( w - 1 ) );
+		}
+		for ( int py = rows - 1; py >= 0; --py ) {
+			const int rs = py * w;
+			const int rw = std::min( w, bc - rs );
+			if ( rw > 1 ) {
+				const int n     = rw - 1;
+				const int scale = ( py > 0 ) ? ( 8 / 2 ) : 8;
+				accum_dc1d_row_base( t, rs, w, n, py > 0, raw_row.data() );
+				for ( int i = n - 1; i >= 0; --i ) {
+					const int raw = ( raw_row[ static_cast<std::size_t>( i ) ] + static_cast<int>( dc[ rs + i ] ) * wl0 ) * scale;
+					dc[ rs + 1 + i ] = finish_dc_diff( raw, dc[ rs + 1 + i ], q0, absmaxp, corr_f, -1 );
+				}
+			}
+			if ( ( py > 0 ) && ( rw > 0 ) ) {
+				dc[ rs ] = finish_dc_diff( eval_dc1d_top_only( t, rs, w ), dc[ rs ], q0, absmaxp, corr_f, -1 );
+			}
+		}
+	}
+#endif
 
 	return true;
 }
@@ -1209,6 +1291,7 @@ bool predict_dc( CodecContext& ctx )
 	----------------------------------------------- */
 bool unpredict_dc( CodecContext& ctx )
 {
+#if defined(USE_PLOCOI)
 	for ( int cmp = 0; cmp < ctx.cmpc; cmp++ ) {
 		const int absmaxp = ctx.max_v( cmp, 0 );
 		const int absmaxn = -absmaxp;
@@ -1216,16 +1299,48 @@ bool unpredict_dc( CodecContext& ctx )
 
 		for ( int dpos = 1; dpos < ctx.cmpnfo[ cmp ].bc; dpos++ ) {
 			short* coef = &ctx.colldata[ cmp ][ 0 ][ dpos ];
-#if defined(USE_PLOCOI)
 			int val = static_cast<int>( *coef ) + dc_coll_predictor( ctx, cmp, dpos );
-#else
-			int val = static_cast<int>( *coef ) + dc_1ddct_predictor( ctx, cmp, dpos );
-#endif
 			if ( val > absmaxp ) val -= corr_f;
 			else if ( val < absmaxn ) val += corr_f;
 			*coef = static_cast<short>( val );
 		}
 	}
+#else
+	std::vector<int> raw_row;
+	for ( int cmp = 0; cmp < ctx.cmpc; cmp++ ) {
+		const int w  = ctx.cmpnfo[ cmp ].bch;
+		const int bc = ctx.cmpnfo[ cmp ].bc;
+		if ( ( bc <= 1 ) || ( w <= 0 ) ) continue;
+
+		const int absmaxp   = ctx.max_v( cmp, 0 );
+		const int corr_f    = ( 2 * absmaxp ) + 1;
+		const int q0        = ctx.quant( cmp, 0 );
+		const int rows      = ( bc + w - 1 ) / w;
+		const Dc1dTables t  = make_dc1d_tables( ctx, cmp );
+		const int wl0       = t.w8x1_7[ 0 ];
+		short* dc           = ctx.colldata[ cmp ][ 0 ].data();
+
+		if ( w > 1 ) {
+			raw_row.resize( static_cast<std::size_t>( w - 1 ) );
+		}
+		for ( int py = 0; py < rows; ++py ) {
+			const int rs = py * w;
+			const int rw = std::min( w, bc - rs );
+			if ( ( py > 0 ) && ( rw > 0 ) ) {
+				dc[ rs ] = finish_dc_diff( eval_dc1d_top_only( t, rs, w ), dc[ rs ], q0, absmaxp, corr_f, +1 );
+			}
+			if ( rw > 1 ) {
+				const int n     = rw - 1;
+				const int scale = ( py > 0 ) ? ( 8 / 2 ) : 8;
+				accum_dc1d_row_base( t, rs, w, n, py > 0, raw_row.data() );
+				for ( int i = 0; i < n; ++i ) {
+					const int raw = ( raw_row[ static_cast<std::size_t>( i ) ] + static_cast<int>( dc[ rs + i ] ) * wl0 ) * scale;
+					dc[ rs + 1 + i ] = finish_dc_diff( raw, dc[ rs + 1 + i ], q0, absmaxp, corr_f, +1 );
+				}
+			}
+		}
+	}
+#endif
 
 	return true;
 }
@@ -1237,15 +1352,25 @@ bool unpredict_dc( CodecContext& ctx )
 bool check_value_range( CodecContext& ctx )
 {
 	for ( int cmp = 0; cmp < ctx.cmpc; cmp++ ) {
+		const int bc = ctx.cmpnfo[ cmp ].bc;
 		for ( int bpos = 0; bpos < 64; bpos++ ) {
 			const int absmax = ctx.max_v( cmp, bpos );
-			const short* band = ctx.colldata[ cmp ][ bpos ].data();
-			for ( int dpos = 0; dpos < ctx.cmpnfo[ cmp ].bc; dpos++ ) {
-				if ( ( band[ dpos ] > absmax ) || ( band[ dpos ] < -absmax ) ) {
-					ctx.set_errormessage( "value out of range error: cmp%i, frq%i, val %i, max %i",
-						cmp, bpos, static_cast<int>( band[ dpos ] ), absmax );
-					ctx.errorlevel = 2;
-					return false;
+			const short hi = static_cast<short>( std::min( absmax, 32767 ) );
+			const short lo = static_cast<short>( -hi );
+			const short* PJG_RESTRICT band = ctx.colldata[ cmp ][ bpos ].data();
+			unsigned char out_of_range = 0;
+			for ( int dpos = 0; dpos < bc; dpos++ ) {
+				const short v = band[ dpos ];
+				out_of_range |= static_cast<unsigned char>( ( v > hi ) | ( v < lo ) );
+			}
+			if ( out_of_range != 0 ) {
+				for ( int dpos = 0; dpos < bc; dpos++ ) {
+					if ( ( band[ dpos ] > absmax ) || ( band[ dpos ] < -absmax ) ) {
+						ctx.set_errormessage( "value out of range error: cmp%i, frq%i, val %i, max %i",
+							cmp, bpos, static_cast<int>( band[ dpos ] ), absmax );
+						ctx.errorlevel = 2;
+						return false;
+					}
 				}
 			}
 		}
@@ -1269,18 +1394,13 @@ bool calc_zdst_lists( CodecContext& ctx )
 		for ( int bpos = 1; bpos < 64; bpos++ ) {
 			const int b_x = unzigzag[ bpos ] % 8;
 			const int b_y = unzigzag[ bpos ] / 8;
-			const short* band = ctx.colldata[ cmp ][ bpos ].data();
-			if ( b_x == 0 ) {
-				for ( int dpos = 0; dpos < bc; dpos++ )
-					if ( band[ dpos ] != 0 ) ctx.zdstylow[ cmp ][ dpos ]++;
-			}
-			else if ( b_y == 0 ) {
-				for ( int dpos = 0; dpos < bc; dpos++ )
-					if ( band[ dpos ] != 0 ) ctx.zdstxlow[ cmp ][ dpos ]++;
-			}
-			else {
-				for ( int dpos = 0; dpos < bc; dpos++ )
-					if ( band[ dpos ] != 0 ) ctx.zdstdata[ cmp ][ dpos ]++;
+			const short* PJG_RESTRICT band = ctx.colldata[ cmp ][ bpos ].data();
+			unsigned char* PJG_RESTRICT dst =
+				( b_x == 0 ) ? ctx.zdstylow[ cmp ].data() :
+				( b_y == 0 ) ? ctx.zdstxlow[ cmp ].data() :
+				               ctx.zdstdata[ cmp ].data();
+			for ( int dpos = 0; dpos < bc; dpos++ ) {
+				dst[ dpos ] = static_cast<unsigned char>( dst[ dpos ] + ( band[ dpos ] != 0 ) );
 			}
 		}
 	}

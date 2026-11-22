@@ -903,3 +903,121 @@ TEST_CASE("convergence regressions: sparse progressive EOB_s Huffman tables and 
 	REQUIRE(packjpg::convert_memory(pjg_out.data(), pjg_out.size(), jpg_rt, nullptr, false, 2));
 	REQUIRE_EQ(jpg_rt.size(), make_trailing_rst_jpg(255).size());
 }
+
+TEST_CASE("auto-vectorized passes: odd geometries, sparse/dense Lakhani i32/i64 chunks, and check_value_range boundaries") {
+	// 1. Round-trip across w = 1, 9, 67, 131 (spanning 8-byte SWAR and 256-block zerosort boundaries)
+	//    for both fits_i32 == true (quant = 8, 300) and int64 fallback fits_i32 == false (16-bit DQT quant = 25000, plus adapt_icos quant >= 2048).
+	const int widths[]  = {1, 9, 67, 131};
+	const int q_modes[] = {8, 300, 25000};
+	for (int w : widths) {
+		for (int qv : q_modes) {
+			const int h = 3;
+			std::vector<unsigned char> hdr;
+			auto push16 = [&](std::uint16_t val) {
+				hdr.push_back(static_cast<unsigned char>(val >> 8));
+				hdr.push_back(static_cast<unsigned char>(val & 0xFF));
+			};
+			hdr.push_back(0xFF); hdr.push_back(0xDB);
+			if (qv <= 255) {
+				push16(67);
+				hdr.push_back(0x00);
+				for (int i = 0; i < 64; ++i) hdr.push_back(static_cast<unsigned char>(qv));
+			} else {
+				push16(131);
+				hdr.push_back(0x10);
+				for (int i = 0; i < 64; ++i) push16(static_cast<std::uint16_t>(qv));
+			}
+			hdr.push_back(0xFF); hdr.push_back(0xC0); push16(11);
+			hdr.push_back(8);
+			push16(static_cast<std::uint16_t>(h * 8));
+			push16(static_cast<std::uint16_t>(w * 8));
+			hdr.push_back(1);
+			hdr.push_back(1); hdr.push_back(0x11); hdr.push_back(0);
+			// Standard luma DC (0) & AC (2) DHTs
+			for (int ti : {0, 2}) {
+				hdr.push_back(0xFF); hdr.push_back(0xC4);
+				push16(static_cast<std::uint16_t>(3 + std_huff_lengths[ti]));
+				hdr.push_back(ti == 0 ? 0x00 : 0x10);
+				hdr.insert(hdr.end(), std_huff_tables[ti], std_huff_tables[ti] + std_huff_lengths[ti]);
+			}
+			hdr.push_back(0xFF); hdr.push_back(0xDA); push16(8);
+			hdr.push_back(1); hdr.push_back(1); hdr.push_back(0x00);
+			hdr.push_back(0); hdr.push_back(63); hdr.push_back(0);
+
+			CodecContext gen;
+			gen.filetype = F_PJG;
+			gen.hdrdata  = hdr;
+			gen.padbit   = 1;
+			REQUIRE(jpg_setup_imginfo(gen, true));
+			const int bc = gen.cmpnfo[0].bc;
+			for (int dpos = 0; dpos < bc; ++dpos) {
+				const int dc_lim = std::max(1, gen.max_v(0, 0));
+				gen.colldata[0][0][dpos] = static_cast<short>(((dpos * 13) % (2 * dc_lim + 1)) - dc_lim);
+				// Row 0: dense low-AC + interior high-AC; Row 1: ultra-sparse (1 isolated nonzero every 70 blocks); Row 2: mixed
+				const int py = dpos / w;
+				const int px = dpos % w;
+				const bool active = (py == 0) || (py == 1 && (px % 70 == 3)) || (py == 2 && ((px & 7) >= 5));
+				if (!active) continue;
+				for (int bpos : {1, 2, 3, 5, 9, 10, 18}) {
+					const int mv = gen.max_v(0, bpos);
+					if (mv <= 0) continue;
+					const int v = ((dpos + bpos) & 1) ? std::min(mv, 3) : -std::min(mv, 2);
+					gen.colldata[0][bpos][dpos] = static_cast<short>(v);
+				}
+			}
+			auto mw = std::make_unique<MemoryWriter>();
+			MemoryWriter* mw_ptr = mw.get();
+			gen.str_out = std::move(mw);
+			REQUIRE(recode_jpeg(gen));
+			REQUIRE(merge_jpeg(gen));
+			const auto src_jpg = mw_ptr->take_data();
+
+			std::vector<std::uint8_t> pjg, rt;
+			REQUIRE(packjpg::convert_memory(src_jpg.data(), src_jpg.size(), pjg, nullptr, false, 1));
+			REQUIRE(packjpg::convert_memory(pjg.data(), pjg.size(), rt, nullptr, false, 1));
+			REQUIRE(rt == src_jpg);
+		}
+	}
+
+	// 2. check_value_range exact boundary & first-error diagnostic across vector/scalar tail positions
+	CodecContext chk;
+	chk.cmpc = 2;
+	for (int c = 0; c < 2; ++c) {
+		chk.qtables[c].fill(static_cast<unsigned short>(c == 0 ? 10 : 25));
+		chk.cmpnfo[c].qtable = chk.qtables[c].data();
+		chk.cmpnfo[c].bch = 259;
+		chk.cmpnfo[c].bcv = 1;
+		chk.cmpnfo[c].bc  = 259;
+		for (int b = 0; b < 64; ++b) {
+			chk.colldata[c][b].assign(259, 0);
+		}
+	}
+	const int m0 = chk.max_v(0, 0);
+	chk.colldata[0][0][0]   = static_cast<short>(m0);
+	chk.colldata[0][0][258] = static_cast<short>(-m0);
+	REQUIRE(check_value_range(chk));
+
+	for (int bad_idx : {0, 15, 16, 258}) {
+		const int m_c1 = chk.max_v(1, 7);
+		chk.errorlevel = 0;
+		chk.colldata[1][7][bad_idx] = static_cast<short>(m_c1 + 1);
+		if (bad_idx + 1 < 259) {
+			chk.colldata[1][7][bad_idx + 1] = -32768; // second error must NOT preempt first error
+		}
+		REQUIRE(!check_value_range(chk));
+		REQUIRE_EQ(chk.errorlevel, 2);
+		char expected[96]{};
+		std::snprintf(expected, sizeof(expected), "value out of range error: cmp1, frq7, val %d, max %d", m_c1 + 1, m_c1);
+		REQUIRE_EQ(chk.errormessage, std::string(expected));
+		chk.colldata[1][7][bad_idx] = 0;
+		if (bad_idx + 1 < 259) chk.colldata[1][7][bad_idx + 1] = 0;
+
+		chk.errorlevel = 0;
+		chk.colldata[0][3][bad_idx] = -32768;
+		REQUIRE(!check_value_range(chk));
+		std::snprintf(expected, sizeof(expected), "value out of range error: cmp0, frq3, val -32768, max %d", chk.max_v(0, 3));
+		REQUIRE_EQ(chk.errormessage, std::string(expected));
+		chk.colldata[0][3][bad_idx] = 0;
+	}
+}
+
